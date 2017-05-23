@@ -5,19 +5,19 @@
 # bash
 echo [bash env]
 
-#etc/builder/premake5.linux codelite
-#etc/builder/premake5.linux gmake
-#etc/builder/premake5.linux vs2013
-#etc/builder/premake5.linux xcode4
-#etc/builder/premake5.linux ninja
-#etc/builder/ninja.linux -C ide
+#sdk/builder/premake5.linux codelite
+#sdk/builder/premake5.linux gmake
+#sdk/builder/premake5.linux vs2013
+#sdk/builder/premake5.linux xcode4
+#sdk/builder/premake5.linux ninja
+#sdk/builder/ninja.linux -C .ide
 
-#etc/builder/premake5.osx codelite
-#etc/builder/premake5.osx gmake
-#etc/builder/premake5.osx vs2013
-#etc/builder/premake5.osx xcode4
-#etc/builder/premake5.osx ninja
-#etc/builder/ninja.osx   -C ide
+#sdk/builder/premake5.osx codelite
+#sdk/builder/premake5.osx gmake
+#sdk/builder/premake5.osx vs2013
+#sdk/builder/premake5.osx xcode4
+#sdk/builder/premake5.osx ninja
+#sdk/builder/ninja.osx   -C .ide
 
 exit
 
@@ -29,10 +29,7 @@ exit
 @echo off
 echo [windows env]
 
-    cd /d "%~dp0"
-
     REM MSVC compiler setup
-
            if exist "%VS140COMNTOOLS%\..\..\VC\bin\x86_amd64\vcvarsx86_amd64.bat" (
               @call "%VS140COMNTOOLS%\..\..\VC\bin\x86_amd64\vcvarsx86_amd64.bat"
     ) else if exist "%VS120COMNTOOLS%\..\..\VC\bin\x86_amd64\vcvarsx86_amd64.bat" (
@@ -41,25 +38,34 @@ echo [windows env]
         echo Warning: Could not find x64 environment variables for Visual Studio 2013/2015
     )
 
-    REM project generation
+    cd /d "%~dp0"
+    pushd "#sdk\builder"
 
-    #etc\builder\premake5.exe codelite
-    #etc\builder\premake5.exe gmake
-    #etc\builder\premake5.exe vs2013
-    #etc\builder\premake5.exe xcode4
-    #etc\builder\premake5.exe ninja
+        REM project generation
+        premake5.exe codelite
+        premake5.exe gmake
+        premake5.exe vs2013
+        premake5.exe xcode4
+        premake5.exe ninja
 
-    REM actual build
+        REM actual build
+        set NINJA_STATUS="[%%e] [%%r/%%f]"
+        ninja.exe -C ..\..\.ide
 
-    set NINJA_STATUS="[%%e] [%%r/%%f]"
-    #etc\builder\ninja.exe -C ide
+    popd
 
 if not "0"=="%ERRORLEVEL%" (
 
     echo  && rem beep
-    pause
+    echo Press any key to continue... && pause > nul
     exit /b
 
 )
+
+    echo ^>^> launcher
+    .bin\debug\launcher.exe
+    echo ^<^< launcher
+
+    echo Press any key to continue... && pause > nul
 
 exit /b

@@ -9,4 +9,4 @@
 - [x] prj.cc0 : licenses.
 - [*] prj.dir : project structure.
 - [ ] prj.doc : documentation, conventions and style.
-- [ ] prj.mak : makefiles and build system.
+- [*] prj.mak : makefiles and build system.
