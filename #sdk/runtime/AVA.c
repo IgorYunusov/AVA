@@ -4,12 +4,12 @@
 #   define API            __declspec(dllexport)
 #endif
 
-#include <stdio.h>
-
 #include "AVA.h"
 
+#include <stdio.h>
+
 void start() {
-    puts(";; AVA - " __DATE__ " " __TIME__);
+    puts(";; AVA - Compiled on " __DATE__ " " __TIME__);
 }
 
 // # endian
@@ -29,8 +29,8 @@ void start() {
     defined(__ia64__)       || defined(__s390__)    || \
     defined(__s390x__)
     enum { is_64bit = 1 };
-    typedef char is_64bit_test[ sizeof(void *) == 8 ];
+    typedef char static_assert_64bit[ sizeof(void *) == 8 ];
 #else
     enum { is_64bit = 0 };
-    typedef char is_64bit_test[ sizeof(void *) == 4 ];
+    typedef char static_assert_32bit[ sizeof(void *) == 4 ];
 #endif

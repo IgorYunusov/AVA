@@ -5,19 +5,19 @@
 # bash
 echo [bash env]
 
-#sdk/builds/premake5.linux codelite
-#sdk/builds/premake5.linux gmake
-#sdk/builds/premake5.linux vs2013
-#sdk/builds/premake5.linux xcode4
-#sdk/builds/premake5.linux ninja
-#sdk/builds/ninja.linux -C .ide
+#sdk/builder/premake5.linux codelite
+#sdk/builder/premake5.linux gmake
+#sdk/builder/premake5.linux vs2013
+#sdk/builder/premake5.linux xcode4
+#sdk/builder/premake5.linux ninja
+#sdk/builder/ninja.linux -C .ide
 
-#sdk/builds/premake5.osx codelite
-#sdk/builds/premake5.osx gmake
-#sdk/builds/premake5.osx vs2013
-#sdk/builds/premake5.osx xcode4
-#sdk/builds/premake5.osx ninja
-#sdk/builds/ninja.osx   -C .ide
+#sdk/builder/premake5.osx codelite
+#sdk/builder/premake5.osx gmake
+#sdk/builder/premake5.osx vs2013
+#sdk/builder/premake5.osx xcode4
+#sdk/builder/premake5.osx ninja
+#sdk/builder/ninja.osx   -C .ide
 
 exit
 
@@ -27,6 +27,14 @@ exit
 
 :windows
 @echo off
+
+    REM cleanup
+
+        if "%1"=="wipe" (
+            if exist .bin rd /q /s .bin && if exist .bin echo "error cannot clean up .bin" && exit /b
+            if exist .ide rd /q /s .ide && if exist .ide echo "error cannot clean up .ide" && exit /b
+            echo Clean up && exit /b
+        )
 
     REM setup
 
@@ -53,18 +61,19 @@ exit
 
     REM build
 
-        pushd "%AVASDK%\builds"
+        pushd "%AVASDK%\builder"
 
             REM project generation
-            premake5.exe codelite
-            premake5.exe gmake
-            premake5.exe vs2013
-            premake5.exe xcode4
+            REM premake5.exe codelite
+            REM premake5.exe gmake
+            REM premake5.exe vs2015
+            REM premake5.exe vs2013
+            REM premake5.exe xcode4
             premake5.exe ninja
 
             REM actual build
             set NINJA_STATUS="[%%e] [%%r/%%f]"
-            ninja.exe -C ..\..\.ide
+            ninja.exe -v -C ..\..\.ide
 
         popd
 
@@ -73,9 +82,9 @@ exit
     pushd "!AVASDK!\.."
 
         if "0"=="%ERRORLEVEL%" (
-            echo ^>^> launch
-            .bin\debug\launch.exe
-            echo ^<^< launch
+            echo ^>^> launcher
+            .bin\debug\launcher.exe
+            echo ^<^< launcher
         ) else (
             echo  && rem beep
         )

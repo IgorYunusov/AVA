@@ -9,15 +9,15 @@ solution "Project"
 
 -- app
 
-project "Launch"
-	kind "ConsoleApp"
+project "Launcher"
+	kind "ConsoleApp" --"WindowedApp"
 	location "../../.ide"
 	language "C++"
 	targetdir "../../.bin/%{cfg.buildcfg}"
 
-	files {"../../#sdk/launch/**.c*", "../../#sdk/launch/**.h*"}
-	includedirs {"../../#sdk/editor/", "../../#sdk/source/"}
-	links {"Source", "Editor", "Game"}
+	files {"../../#sdk/launcher/**.c*", "../../#sdk/launcher/**.h*" } -- "../../#sdk/launcher/dialog.rc" }
+	includedirs {"../../#sdk/editor/", "../../#sdk/runtime/"}
+	links {"runtime", "editor", "game" }
 
 	configuration "windows"
 		links { "user32", "gdi32" }
@@ -27,7 +27,7 @@ project "Launch"
 
 	filter "configurations:debug"
 		defines {"DEBUG"}
-		flags {"Symbols"}
+		symbols "On"
 
 	filter "configurations:release"
 		defines {"NDEBUG"}
@@ -45,19 +45,19 @@ project "Launch"
 
 -- dlls
 
-project "Source"
+project "runtime"
 	kind "SharedLib"
 	location "../../.ide"
 	language "C++"
 	targetdir "../../.bin/%{cfg.buildcfg}"
 
-	files {"../../#sdk/source/*.c", "../../#sdk/source/*.cpp", "../../#sdk/source/*.h", "../../#sdk/source/*.inl"}
-	includedirs {"../../#sdk/source/"}
+	files {"../../#sdk/runtime/*.c", "../../#sdk/runtime/*.cpp", "../../#sdk/runtime/*.h", "../../#sdk/runtime/*.inl"}
+	includedirs {"../../#sdk/runtime/"}
 	defines {"DLL_EXPORT"}
 
 	filter "configurations:debug"
 		defines {"DEBUG"}
-		flags {"Symbols"}
+		symbols "On"
 
 	filter "configurations:release"
 		defines {"NDEBUG"}
@@ -67,19 +67,19 @@ project "Source"
 		defines {"NDEBUG", "SHIPPING"}
 		optimize "On"
 
-project "Editor"
+project "editor"
 	kind "SharedLib"
 	location "../../.ide"
 	language "C++"
 	targetdir "../../.bin/%{cfg.buildcfg}"
 
 	files {"../../#sdk/editor/**.c*", "../../#sdk/editor/**.h*"}
-	includedirs {"../../#sdk/editor/", "../../#sdk/source/"}
+	includedirs {"../../#sdk/editor/", "../../#sdk/runtime/"}
 	defines {"DLL_EXPORT"}
 
 	filter "configurations:debug"
 		defines {"DEBUG"}
-		flags {"Symbols"}
+		symbols "On"
 
 	filter "configurations:release"
 		defines {"NDEBUG"}
@@ -89,7 +89,7 @@ project "Editor"
 		defines {"NDEBUG", "SHIPPING"}
 		optimize "On"
 
-project "Game"
+project "game"
 	kind "SharedLib"
 	location "../../.ide"
 	language "C++"
@@ -97,12 +97,12 @@ project "Game"
 
 	files { "../../**.c", "../../**.cpp", "../../**.cc", "../../**.cxx", "../../**.h", "../../**.hpp", "../../**.inl"}
 	removefiles { "../../#sdk/**" }
-	includedirs {"../../#sdk/editor/", "../../#sdk/source/"}
+	includedirs {"../../#sdk/editor/", "../../#sdk/runtime/"}
 	defines {"DLL_EXPORT"}
 
 	filter "configurations:debug"
 		defines {"DEBUG"}
-		flags {"Symbols"}
+		symbols "On"
 
 	filter "configurations:release"
 		defines {"NDEBUG"}
