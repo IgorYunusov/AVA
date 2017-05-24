@@ -27,45 +27,62 @@ exit
 
 :windows
 @echo off
-echo [windows env]
 
-    REM MSVC compiler setup
-           if exist "%VS140COMNTOOLS%\..\..\VC\bin\x86_amd64\vcvarsx86_amd64.bat" (
-              @call "%VS140COMNTOOLS%\..\..\VC\bin\x86_amd64\vcvarsx86_amd64.bat"
-    ) else if exist "%VS120COMNTOOLS%\..\..\VC\bin\x86_amd64\vcvarsx86_amd64.bat" (
-              @call "%VS120COMNTOOLS%\..\..\VC\bin\x86_amd64\vcvarsx86_amd64.bat"
-    ) else (
-        echo Warning: Could not find x64 environment variables for Visual Studio 2013/2015
-    )
+    REM setup
 
-    cd /d "%~dp0"
-    pushd "#sdk\builds"
+        REM MSVC
+        if not "%Platform%"=="x64" ( 
+            echo [win][msc]
+                   if exist "%VS140COMNTOOLS%\..\..\VC\bin\x86_amd64\vcvarsx86_amd64.bat" (
+                      @call "%VS140COMNTOOLS%\..\..\VC\bin\x86_amd64\vcvarsx86_amd64.bat"
+            ) else if exist "%VS120COMNTOOLS%\..\..\VC\bin\x86_amd64\vcvarsx86_amd64.bat" (
+                      @call "%VS120COMNTOOLS%\..\..\VC\bin\x86_amd64\vcvarsx86_amd64.bat"
+            ) else (
+                echo Warning: Could not find x64 environment variables for Visual Studio 2013/2015
+                exit /b
+            )
+        )
 
-        REM project generation
-        premake5.exe codelite
-        premake5.exe gmake
-        premake5.exe vs2013
-        premake5.exe xcode4
-        premake5.exe ninja
+        REM Luajit, %AVASDK%
+        if ""=="" ( 
+            echo [win][set]
+            set AVASDK="%~dp0%\#sdk\"
+            REM set      path="%path%;%~dp0%\#sdk\;"
+            REM      endlocal &&  && set AVASDK=%AVASDK%
+        )
 
-        REM actual build
-        set NINJA_STATUS="[%%e] [%%r/%%f]"
-        ninja.exe -C ..\..\.ide
+    REM build
+
+        pushd "%AVASDK%\builds"
+
+            REM project generation
+            premake5.exe codelite
+            premake5.exe gmake
+            premake5.exe vs2013
+            premake5.exe xcode4
+            premake5.exe ninja
+
+            REM actual build
+            set NINJA_STATUS="[%%e] [%%r/%%f]"
+            ninja.exe -C ..\..\.ide
+
+        popd
+
+    REM launch
+
+    pushd "!AVASDK!\.."
+
+        if "0"=="%ERRORLEVEL%" (
+            echo ^>^> launch
+            .bin\debug\launch.exe
+            echo ^<^< launch
+        ) else (
+            echo  && rem beep
+        )
 
     popd
 
-if not "0"=="%ERRORLEVEL%" (
+    REM exit
 
-    echo  && rem beep
-    echo Press any key to continue... && pause > nul
-    exit /b
-
-)
-
-    echo ^>^> launch
-    .bin\debug\launch.exe
-    echo ^<^< launch
-
-    echo Press any key to continue... && pause > nul
-
-exit /b
+        echo Press any key to continue... && pause > nul
+        exit /b
