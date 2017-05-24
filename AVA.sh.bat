@@ -5,19 +5,19 @@
 # bash
 echo [bash env]
 
-#sdk/builder/premake5.linux codelite
-#sdk/builder/premake5.linux gmake
-#sdk/builder/premake5.linux vs2013
-#sdk/builder/premake5.linux xcode4
-#sdk/builder/premake5.linux ninja
-#sdk/builder/ninja.linux -C .ide
+#sdk/builds/premake5.linux codelite
+#sdk/builds/premake5.linux gmake
+#sdk/builds/premake5.linux vs2013
+#sdk/builds/premake5.linux xcode4
+#sdk/builds/premake5.linux ninja
+#sdk/builds/ninja.linux -C .ide
 
-#sdk/builder/premake5.osx codelite
-#sdk/builder/premake5.osx gmake
-#sdk/builder/premake5.osx vs2013
-#sdk/builder/premake5.osx xcode4
-#sdk/builder/premake5.osx ninja
-#sdk/builder/ninja.osx   -C .ide
+#sdk/builds/premake5.osx codelite
+#sdk/builds/premake5.osx gmake
+#sdk/builds/premake5.osx vs2013
+#sdk/builds/premake5.osx xcode4
+#sdk/builds/premake5.osx ninja
+#sdk/builds/ninja.osx   -C .ide
 
 exit
 
@@ -39,7 +39,7 @@ echo [windows env]
     )
 
     cd /d "%~dp0"
-    pushd "#sdk\builder"
+    pushd "#sdk\builds"
 
         REM project generation
         premake5.exe codelite
@@ -62,9 +62,9 @@ if not "0"=="%ERRORLEVEL%" (
 
 )
 
-    echo ^>^> launcher
-    .bin\debug\launcher.exe
-    echo ^<^< launcher
+    echo ^>^> launch
+    .bin\debug\launch.exe
+    echo ^<^< launch
 
     echo Press any key to continue... && pause > nul
 
