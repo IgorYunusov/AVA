@@ -74,6 +74,7 @@ exit
             REM actual build
             set NINJA_STATUS="[%%e] [%%r/%%f]"
             ninja.exe -v -C ..\..\.ide
+            set OK=%ERRORLEVEL%
 
         popd
 
@@ -81,9 +82,9 @@ exit
 
     pushd "!AVASDK!\.."
 
-        if "0"=="%ERRORLEVEL%" (
+        if "0"=="%OK%" (
             echo ^>^> launcher
-            .bin\debug\launcher.exe
+            .bin\debug\launcher.exe %*
             echo ^<^< launcher
         ) else (
             echo  && rem beep
