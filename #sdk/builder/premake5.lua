@@ -9,15 +9,15 @@ solution "Project"
 
 -- app
 
-project "Launcher"
+project "launcher"
 	kind "ConsoleApp" --"WindowedApp"
 	location "../../.ide"
 	language "C++"
 	targetdir "../../.bin/%{cfg.buildcfg}"
 
 	files {"../../#sdk/launcher/**.c*", "../../#sdk/launcher/**.h*" } -- "../../#sdk/launcher/dialog.rc" }
-	includedirs {"../../#sdk/editor/", "../../#sdk/runtime/"}
-	links {"runtime", "editor", "game" }
+	includedirs {"../../#sdk/editor/", "../../#sdk/"}
+	links {"runtimes", "editor", "game" }
 
 	configuration "windows"
 		links { "user32", "gdi32" }
@@ -45,14 +45,15 @@ project "Launcher"
 
 -- dlls
 
-project "runtime"
+project "runtimes"
 	kind "SharedLib"
 	location "../../.ide"
 	language "C++"
 	targetdir "../../.bin/%{cfg.buildcfg}"
 
-	files {"../../#sdk/runtime/*.c", "../../#sdk/runtime/*.cpp", "../../#sdk/runtime/*.h", "../../#sdk/runtime/*.inl"}
-	includedirs {"../../#sdk/runtime/"}
+	files {"../../#sdk/*.c", "../../#sdk/*.cpp", "../../#sdk/*.h", "../../#sdk/*.inl"}
+	files {"../../#sdk/runtimes/**.c", "../../#sdk/runtimes/**.cpp", "../../#sdk/runtimes/**.h", "../../#sdk/runtimes/**.inl"}
+	includedirs {"../../#sdk/"}
 	defines {"DLL_EXPORT"}
 
 	filter "configurations:debug"
@@ -74,7 +75,7 @@ project "editor"
 	targetdir "../../.bin/%{cfg.buildcfg}"
 
 	files {"../../#sdk/editor/**.c*", "../../#sdk/editor/**.h*"}
-	includedirs {"../../#sdk/editor/", "../../#sdk/runtime/"}
+	includedirs {"../../#sdk/editor/", "../../#sdk/"}
 	defines {"DLL_EXPORT"}
 
 	filter "configurations:debug"
@@ -97,7 +98,7 @@ project "game"
 
 	files { "../../**.c", "../../**.cpp", "../../**.cc", "../../**.cxx", "../../**.h", "../../**.hpp", "../../**.inl"}
 	removefiles { "../../#sdk/**" }
-	includedirs {"../../#sdk/editor/", "../../#sdk/runtime/"}
+	includedirs {"../../#sdk/editor/", "../../#sdk/"}
 	defines {"DLL_EXPORT"}
 
 	filter "configurations:debug"
