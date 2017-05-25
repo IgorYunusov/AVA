@@ -717,6 +717,28 @@ void cd( const char *path ) {
 #endif
 }
 
+
+// # tst
+
+#include <stdlib.h>
+#include <stdio.h>
+static int right = 0, wrong = 0;
+static const char *suite = "";
+int unit(const char *name) { $
+    suite = name;
+    right = wrong = 0;
+    return 1;
+}
+int (test)(int expr, const char *file, int line) { $
+    right = right + !!expr;
+    wrong = wrong +  !expr;
+    if( file && line )
+    printf("; [%s] L%d %s [%d/%d tests passed] %s\n", expr ? " OK ":"FAIL", line, file, right, right+wrong, suite );
+    else
+    printf("; [%s] [%d/%d tests passed] %s\n", expr ? " OK ":"FAIL", right, right+wrong, suite );
+    return 0;
+}
+
 // # crt
 
 void start() { $
@@ -743,4 +765,8 @@ void start() { $
         ((int(*)(int, char**))pfn)(0,0);
         dllclose(0);
     }
+
+    test(1 < 2);
+    test(2 < 1);
+    (test)(0,0,0); // reports
 }

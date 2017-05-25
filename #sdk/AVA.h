@@ -111,6 +111,14 @@ EXPORT( 100,
 
     API char*  exedir();
 
+    // # kit.test unit-tests
+    // - define section for next tests
+    // - test case. symbol gets macro'ed at end of file
+    // usage: unit("suite 123"); test(1 < 2); test(2 < 3);
+
+    API int unit(const char *name);
+    API int test(int expression, const char *file, int line);
+
     // # std.str string manipulation
     // - format variable args into temporary ring-buffer. 16 slots per thread.
     // - format variable list into temporary ring-buffer. 16 slots per thread.
@@ -126,7 +134,8 @@ EXPORT( 100,
     API  int   dllopen(int plug_id, const char *pathfile);
     API void*  dllfind(int plug_id, const char *name);
     API void   dllclose(int plug_id);
-
 )
+
+#define test(expr) test(expr, __FILE__, __LINE__)
 
 #endif /* AVA_VERSION */
