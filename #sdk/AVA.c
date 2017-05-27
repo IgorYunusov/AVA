@@ -108,7 +108,7 @@ enum {
 
 static void *oom = 0;
 
-void* alloc( void **ptr, int len ) {
+void* alloc( void **ptr, int len ) { // $
     return *ptr = realloc( *ptr, len );
 }
 
@@ -233,7 +233,7 @@ char *hexdump( const void *ptr, unsigned len ) { $
 #include <dbghelp.h>
 #pragma comment(lib, "DbgHelp.lib")
 #pragma comment(lib, "Kernel32.lib")
-static int backtrace( void **addr, int maxtraces ) {
+static int backtrace( void **addr, int maxtraces ) { //$
     static HANDLE process = 0;
     if( !process ) process = GetCurrentProcess();
     if( !process ) exit( tty( "error: no current process" ) );
@@ -251,7 +251,7 @@ static int backtrace( void **addr, int maxtraces ) {
     }
     return rtlCaptureStackBackTrace(1, maxtraces, (PVOID *)addr, (DWORD *) 0);
 }
-static char **backtrace_symbols(void *const *array,int size) {
+static char **backtrace_symbols(void *const *array,int size) { //$
     HANDLE process = GetCurrentProcess();
     enum { MAXSYMBOLNAME = 512 - sizeof(IMAGEHLP_SYMBOL64) };
     char symbol64_buf     [ 512 ];
@@ -311,7 +311,7 @@ static int backtrace(void **, int) { $return 0; }
 static char **backtrace_symbols(void *const *,int) { $return 0; }
 #endif
 
-void callstack( int traces, int (*yield)( const char *entry ) ) {
+void callstack( int traces, int (*yield)( const char *entry ) ) { //$
     enum { skip = 1 }; /* exclude 1 trace from stack (this function) */
     enum { maxtraces = 128 };
 
@@ -382,7 +382,7 @@ static void catch(int signum) { $
 #ifndef _WIN32
 #include <sys/resource.h> // setrlimit()
 #endif
-void trap() { $// trapc(), trapcpp()
+void trap() { $ // trapc(), trapcpp()
     // install signal handlers
     const int signals[] = { // The C standard defines following 6 signals:
         SIGABRT,      // abort: abnormal termination.
@@ -452,10 +452,10 @@ char *shorten(const wchar_t *wstr) { $
 }*/
 #endif
 
-char* strfindl(char *text, const char *substring) {
+char* strfindl(char *text, const char *substring) { $
     return strstr( text, substring );
 }
-char* strfindr(char *text, const char *substring) {
+char* strfindr(char *text, const char *substring) { $
     char *result = 0;
     while(1) {
         char *found = strstr(text, substring);
@@ -465,29 +465,29 @@ char* strfindr(char *text, const char *substring) {
     }
     return result;
 }
-char* strtriml(char *text, const char *substring) {
+char* strtriml(char *text, const char *substring) { $
     char *found = strfindr(text, substring);
     if( found ) memmove(text, found+1, strlen(found));
     return text;
 }
-char* strtrimr(char *text, const char *substring) {
+char* strtrimr(char *text, const char *substring) { $
     char *found = strstr(text, substring);
     if( found ) found[0] = '\0';
     return text;
 }
-int strmatch( const char *text, const char *pattern ) {
+int strmatch( const char *text, const char *pattern ) { $
     if( *pattern=='\0' ) return !*text;
     if( *pattern=='*' )  return strmatch(text, pattern+1) || (*text && strmatch(text+1, pattern));
     if( *pattern=='?' )  return *text && (*text != '.') && strmatch(text+1, pattern+1);
     return (*text == *pattern) && strmatch(text+1, pattern+1);
 }
-char *strlower( char *str ) {
+char *strlower( char *str ) { $
     for( char *s = str; *s; *s++ ) {
-        if( *s >= 'A' && *s <= 'Z' ) *s = *s - 'A' + 'a';
+        if( *s >= 'A' && *s <= 'Z' ) *s = *s - 'A' + 'a'; // *s &= 32;
     }
     return str;
 }
-int strchop(const char **tokens, int *sizes, int avail, const char *src, const char *delim) {
+int strchop(const char **tokens, int *sizes, int avail, const char *src, const char *delim) { $
     while( *src && avail-- > 0 ) {
         int n = strcspn( src += strspn(src, delim), delim );
         *tokens++ = (*sizes++ = n) ? src : "";
@@ -495,11 +495,11 @@ int strchop(const char **tokens, int *sizes, int avail, const char *src, const c
     }
     return *tokens = 0, *sizes = 0, avail > 0;
 }
-bool strbegin( const char *text, const char *substring ) {
+bool strbegin( const char *text, const char *substring ) { $
     int s1 = strlen(text), s2 = strlen(substring);
     return s1 >= s2 ? 0 == memcmp( &text[       0 ], substring, s2 ) : false;
 }
-bool strend( const char *text, const char *substring ) {
+bool strend( const char *text, const char *substring ) { $
     int s1 = strlen(text), s2 = strlen(substring);
     return s1 >= s2 ? 0 == memcmp( &text[ s1 - s2 ], substring, s2 ) : false;
 }
@@ -560,45 +560,82 @@ char *utf8(uint32_t cp) { $
 }
 
 // # ios
-// todo: iosflock, iosfunlock
+// @ todo : iosflock, iosfunlock
+// @ todo : iofappend
 
+#if !defined(__MINGW32__) && !defined(_WIN32)
+    #include <unistd.h>
+    #include <sys/mman.h>
+#else
+    // mmap() replacement for Windows. Placed into the public domain (Mike Frysinger)
+    #include <io.h>
+    #include <windows.h>
+    #include <sys/types.h>
+    enum {  PROT_READ = 0x1, PROT_WRITE = 0x2, PROT_EXEC = 0x4,
+            MAP_SHARED = 0x01, MAP_PRIVATE = 0x02, MAP_ANON = 0x20, MAP_ANONYMOUS = MAP_ANON };
+    #define MAP_FAILED    ((void *) -1)
+    static void* mmap(void* start, size_t length, int prot, int flags, int fd, size_t offset) { $
+        DWORD flProtect;
+        size_t end = length + offset;
+        if( !(prot & ~(PROT_READ | PROT_WRITE | PROT_EXEC)) ) {
+            if( ( fd == -1 &&  (flags & MAP_ANON) && !offset ) ||
+                ( fd != -1 && !(flags & MAP_ANON)            )) {
+                     if( prot & PROT_EXEC  ) flProtect = prot & PROT_READ ? PAGE_EXECUTE_READ : PAGE_EXECUTE_READWRITE;
+                else if( prot & PROT_WRITE ) flProtect = PAGE_READWRITE;
+                else                         flProtect = PAGE_READONLY;
+                HANDLE h = CreateFileMapping( fd == -1 ? INVALID_HANDLE_VALUE : (HANDLE)_get_osfhandle(fd),
+                    NULL, flProtect, (end >> 32), (uint32_t)end, NULL);
+                if( h != NULL ) {
+                    DWORD dwDesiredAccess = 0;
+                    dwDesiredAccess |= prot & PROT_WRITE ? FILE_MAP_WRITE : FILE_MAP_READ;
+                    dwDesiredAccess |= prot & PROT_EXEC ? FILE_MAP_EXECUTE : 0;
+                    dwDesiredAccess |= flags & MAP_PRIVATE ? FILE_MAP_COPY : 0;
+                    void *ret = MapViewOfFile(h, dwDesiredAccess, (offset >> 32), (uint32_t)offset, length);
+                    CloseHandle(h); // close the Windows Handle here (we handle the file ourselves with fd)
+                    return ret == NULL ? MAP_FAILED : ret;
+                }
+            }
+        }
+        return MAP_FAILED;
+    }
+    static void munmap(void* addr, size_t length) { $
+        UnmapViewOfFile(addr);
+    }
+#endif
+#include <fcntl.h> // O_RDONLY
 #include <stdio.h>
 static
 FILE *fopen8( const char *pathfile8, const char *mode8 ) { $
-#ifdef _WIN32
-    wchar_t *pf = widen(pathfile8), *md = widen(mode8);
-    FILE *fp = _wfopen(pf, md);
-    return free(md), free(pf), fp;
-#else
-    return fopen( pathfile8, mode8 );
-#endif
+    #ifdef _WIN32
+        wchar_t *pf = widen(pathfile8), *md = widen(mode8);
+        FILE *fp = _wfopen(pf, md);
+        return free(md), free(pf), fp;
+    #else
+        return fopen( pathfile8, mode8 );
+    #endif
 }
-static
-void* iofread2(const char *pathfile, void **reptr) { $
-    for( FILE *fp = fopen8(pathfile, "rb"); fp; fp = (fclose(fp), NULL) ) {
-        fseek(fp, 0L, SEEK_END);
-        size_t len = ftell(fp);
-        fseek(fp, 0L, SEEK_SET);
-        // @todo: bring back original code: void *data = reptr ? realloc(*reptr, len + 1) : (void *)stack(len + 1);
-        void *data = realloc(reptr ? *reptr : 0, len + 1);
-        if( data ) {
-            if( reptr ) *reptr = data;
-            len[(char*)data] = '\0';
-            if( len == 0 || 1 == fread(data, len, 1, fp) ) {
-                return fclose(fp), data;
-            }
-        }
+char* iofmap( const char *pathfile, size_t offset, size_t len ) { $
+    int file = open(pathfile, O_RDONLY);
+    if( file < 0 ) {
+        return 0;
     }
-    return NULL;
+    void *ptr = mmap(0, len, PROT_READ, MAP_PRIVATE, file, 0);
+    if( ptr == MAP_FAILED ) {
+        ptr = 0;
+    }
+    close(file); // close file. mapping held until unmapped
+    return (char *)ptr;
 }
-static
-char* iofchunk( const char *pathfile, size_t offset, size_t len ) {
-    // @todo
-    return 0;
+void iofunmap( char *buf, size_t len ) { $
+    munmap( buf, len );
 }
 char* iofread(const char *pathfile) { $
-    // return readchunk( pathfile, 0, ~0ull );
-    return iofread2(pathfile, 0);
+    size_t len = iofsize(pathfile);
+    char *buf = realloc( 0, len + 1 ); buf[len] = 0;
+    char *map = iofmap( pathfile, 0, len );
+    memcpy( buf, map, len );
+    iofunmap( map, len );
+    return buf;
 }
 bool iofwrite(const char *pathfile, const void *data, int len) { $
     bool ok = 0;
@@ -618,7 +655,7 @@ uint64_t iofsize( const char *pathfile ) { $
     struct stat st;
     return stat(pathfile, &st) < 0 ? 0ULL : (uint64_t)st.st_size;
 }
-bool iofexist( const char *pathfile ) {
+bool iofexist( const char *pathfile ) { $
     return iofstamp( pathfile ) > 0;
 }
 bool iofisdir( const char *pathfile ) { $
@@ -641,7 +678,6 @@ bool iofisvirt( const char *pathfile ) { $
     struct stat st;
     return stat(pathfile, &st) < 0 ? 1 : 0;
 }
-
 
 // # bin
 
@@ -710,7 +746,6 @@ const char *bintype(const char *buf, int len) { $
         "zip",      2, "PK", 0,
         0
     };
-
     for( int i = 0; types[i].ext; ++i ) {
         if( (types[i].off + types[i].len) < len ) {
             if( 0 == memcmp( buf + types[i].off, types[i].buf, types[i].len ) ) {
@@ -780,13 +815,13 @@ void dllclose(int plug_id) { $
 #endif
 #include <stdio.h>
 
-bool tty(const char *text) {
+bool tty(const char *text) { $
 #ifdef _MSC_VER
     OutputDebugStringA( text );
 #endif
     return !!puts( text );
 }
-void ttycolor( uint8_t r, uint8_t g, uint8_t b ) {
+void ttycolor( uint8_t r, uint8_t g, uint8_t b ) { $
 #if _WIN32
     const HANDLE stdout_handle = GetStdHandle(STD_OUTPUT_HANDLE);
     auto color = ( r > 127 ? FOREGROUND_RED : 0 ) |
@@ -807,7 +842,7 @@ void ttycolor( uint8_t r, uint8_t g, uint8_t b ) {
     printf("\033[38;5;%dm", r*36+g*6+b+16); // "\033[0;3%sm", color_code);
 #endif
 }
-void ttydrop() {
+void ttydrop() { $
 #ifdef _WIN32
     //static FILE* fcon = 0; if(!fcon) fcon = fopen("CON", "w" );            // open console
     //static FILE* fout = 0; if(!fout) fout = freopen( "CON", "w", stdout ); // redirect stdout to console
@@ -826,6 +861,7 @@ void ttydrop() {
 
 // # dir
 // @ todo: ensure paths end with slash always
+// @ todo: dirmk(), dirrm(), dirrmrf()
 
 #include <stdlib.h> // realpath
 #if _WIN32
@@ -844,15 +880,15 @@ void ttydrop() {
 #ifndef PATH_MAX
 #define PATH_MAX MAX_PATH
 #endif
-static // @todo dirmk(); dirrm(); dirrmrf();
-void dirch( const char *path ) {
+static 
+void dirch( const char *path ) { $
 #ifdef _MSC_VER
     _chdir( path );
 #else
     chdir(path);
 #endif
 }
-char *dirfix(char *pathfile) {
+char *dirfix(char *pathfile) { $
     for( char *p = pathfile; *p; ++p ) {
         if( *p == '\\' ) {
             *p = '/';
@@ -860,21 +896,21 @@ char *dirfix(char *pathfile) {
     }
     return pathfile;
 }
-char *dirpath( char *dir ) {
+char *dirpath( char *dir ) { $
     char *s = strrchr( dirfix(dir), '/' );
     return s ? (s[1] = '\0', dir) : (dir[0] = '\0', dir);
 }
-char *dirbase( char *dir ) {
+char *dirbase( char *dir ) { $
     char *s = strrchr( dirfix(dir), '/' );
     if( s ) strcpy( dir, s+1 );
     return dir;
 }
-char *dirname( char *dir ) {
+char *dirname( char *dir ) { $
     char *t = strstr( dirbase( dir ), "." );
     if( t ) *t = 0;
     return dir;
 }
-char *dirtype( char *dir ) {
+char *dirtype( char *dir ) { $
     char *t = strstr( dirbase( dir ), "." );
     if( t ) strcpy( dir, t /*+1*/ );
     return dir;
@@ -906,7 +942,7 @@ bool dirisabs(const char *pathfile) { $
 // # usr
 
 static
-char *appfullpath() {
+char *appfullpath() { $
     static char *t = 0;
     if(t) return t;
 
@@ -929,7 +965,7 @@ char *appfullpath() {
     t = strdup( __argv[0] );
     return t = dirabs( &t );
 }
-char *usrbin() {
+char *usrbin() { $
     static char *t = 0;
     if(t) return t;
     t = strdup(__argv[0]);
@@ -948,7 +984,7 @@ char *usrname() { $
     t = strdup( t ? t : "GUEST" );
     return t;
 }
-char *usrgame() {
+char *usrgame() { $
     static char *t = 0;
     if( t ) return t;
 
@@ -982,7 +1018,7 @@ char *usrtemp() { $
     return t;
 }
 THREAD_LOCAL char cwd[PATH_MAX+1];
-char *usrwork() {
+char *usrwork() { $
     getcwd(cwd, sizeof(cwd));
     return cwd;
 }
@@ -1082,16 +1118,16 @@ int dialog(const char *fmt, ...) { $
 
 // # arg
 
-int argc() {
+int argc() { $
     return __argc;
 }
-char **argv() {
+char **argv() { $
     return __argv;
 }
 
 // # cfg
 
-const char *env( const char *defaults, const char *csv_sets ) {
+const char *env( const char *defaults, const char *csv_sets ) { $
     int tksizes[128];
     const char *tokens[128];
     if( strchop( tokens,tksizes,128,csv_sets, "," ) ) {
@@ -1103,7 +1139,7 @@ const char *env( const char *defaults, const char *csv_sets ) {
     return defaults;
 }
 
-const char *arg( const char *defaults, const char *csv_opts ) {
+const char *arg( const char *defaults, const char *csv_opts ) { $
     int tksizes[128];
     const char *tokens[128];
     if( strchop( tokens,tksizes,128,csv_opts, "," ) ) {
@@ -1126,7 +1162,7 @@ const char *arg( const char *defaults, const char *csv_opts ) {
     return defaults;
 }
 
-const char *ini( const char *defaults, const char *csv_keys ) {
+const char *ini( const char *defaults, const char *csv_keys ) { $
     static char *keys[128] = {0}, *values[128];
     if( !keys[0] ) {
         char *inibuf = (char *)iofread( va("%s/%s.ini", usrgame(), usrbin()) );
@@ -1161,7 +1197,7 @@ const char *ini( const char *defaults, const char *csv_keys ) {
     return defaults;
 }
 
-const char* cfg(const char *defaults, const char *csv_vars) {
+const char* cfg(const char *defaults, const char *csv_vars) { $
     const char *found;
     if( 0 != (found = env(0, csv_vars))) return found;
     if( 0 != (found = arg(0, csv_vars))) return found;
@@ -1170,9 +1206,97 @@ const char* cfg(const char *defaults, const char *csv_vars) {
 }
 
 static
-int cfgi( int defaults, const char *key ) {
+int cfgi( int defaults, const char *key ) { $
     const char *found = cfg(0, key);
     return found ? atoi( found ) : defaults;
+}
+
+// # uid
+
+#ifdef _WIN32
+#include <Wincrypt.h>
+#endif
+#include <stdio.h>
+void uidbuf(char *buffer, int len) { $
+#ifdef _WIN32
+#   pragma comment(lib, "Advapi32.lib")
+    HCRYPTPROV provider;
+    if (0 != CryptAcquireContext(&provider, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)) {
+        if (0 != CryptGenRandom(provider, len, (uint8_t*)buffer)) {
+            CryptReleaseContext(provider, 0);
+            return; // ok
+        }
+        CryptReleaseContext(provider, 0);
+    }
+#else
+    FILE* fp = fopen("/dev/urandom", "rb");
+    fp = fp ? fp : fopen("/dev/random", "rb");
+    if (fp) { 
+        if( len == fread(buffer, 1, len, fp) ) {
+            fclose(fp);
+            return; // ok
+        }
+        fclose(fp);
+    }
+#endif
+}
+//static THREAD_LOCAL char uuid_[36+1] = {0};
+char *uid4( char uuid_[36+1] ) { $
+    unsigned char buffer[16];
+    uidbuf(buffer, sizeof(buffer));
+    sprintf(uuid_,
+        "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+        buffer[0],buffer[1],buffer[2],buffer[3],
+        buffer[4],buffer[5],
+        buffer[6],buffer[7],
+        buffer[8],buffer[9],
+        buffer[10],buffer[11],buffer[12],buffer[13],buffer[14],buffer[15]
+    );
+    uuid_[14] = '4';
+    return uuid_;
+}
+
+// # rnd
+
+#include <stdint.h>
+static uint64_t mix64(uint64_t state) { $
+    // splitmix64: Written in 2015 by Sebastiano Vigna (vigna@acm.org) (CC1.0)
+    // the state can be seeded with any value.
+    uint64_t z = (state += UINT64_C(0x9E3779B97F4A7C15));
+    z = (z ^ (z >> 30)) * UINT64_C(0xBF58476D1CE4E5B9);
+    z = (z ^ (z >> 27)) * UINT64_C(0x94D049BB133111EB);
+    return z ^ (z >> 31);
+}
+static uint64_t next128(uint64_t state[2]) { $
+    // xoroshiro128+: Written in 2016 by David Blackman and Sebastiano Vigna (vigna@acm.org) (CC1.0)
+    // state must be seeded to not zero. can be seed with splitmix64 generator
+    uint64_t s1 = state[1];
+    const uint64_t s0 = state[0];
+    const uint64_t result = s0 + s1;
+    s1 ^= s0;
+    state[0] = ((s0 << 55) | (s0 >> (64 - 55))) ^ s1 ^ (s1 << 14);
+    state[1] = ((s1 << 36) | (s1 >> (64 - 36)));
+    return result;
+}
+void rndseed(uint64_t state[2], int64_t seed) { $
+    state[0] = mix64(seed);
+    state[1] = mix64(seed+1);
+}
+uint64_t rndu64(uint64_t state[2]) { $
+    return next128( state );
+}
+double rnddbl(uint64_t state[2]) { $ // (0, 1]
+    uint64_t u64 = rndu64(state);
+    // With the exception of generators designed to provide directly double-precision
+    // floating-point numbers, the fastest way to convert in C99 a 64-bit unsigned
+    // integer x to a 64-bit double is:
+    union { uint64_t i; double d; } u; u.i = UINT64_C(0x3FF) << 52 | u64 >> 12;
+    double dbl = u.d - 1.0;
+    return 2.0 * ((float)(dbl / 2));
+}
+int64_t rndint(uint64_t state[2], int64_t mini, int64_t maxi) { $ // [mini,maxi]
+    assert( mini < maxi );
+    return (int64_t)(mini + rnddbl(state) * (maxi + 0.5 - mini));
 }
 
 // # crt
@@ -1183,7 +1307,7 @@ static int expected_quit = 0;
 static int num_rings = 0;
 
 static
-void ring_atexit(void) {
+void ring_atexit(void) { // $
     //free(oom), oom = 0;
     if( expected_quit ) {
         while( num_rings ) {
@@ -1203,12 +1327,12 @@ void ring_atexit(void) {
     }
 }
 
-void quit() {
+void quit() { // $
     expected_quit = 1;
     exit(0);
 }
 
-void ring( bool expr, const char *title, void (*quit)() ) {
+void ring( bool expr, const char *title, void (*quit)() ) { // $
     if( !num_rings ) atexit(ring_atexit);
     if( !expr ) {
         exit(-1);
@@ -1257,13 +1381,27 @@ int tests() {
     return ok;
 }
 
-void init() { $
+#include <string.h>
+static
+char *build_date() { $
+    //                 012345678901234567890123
+    //__TIMESTAMP__ -> Sun Mar 26 16:35:27 2017 -> 2017-03-26 16:35:27
+    const char *mos = "JanFebMarAprMayJunJulAugSepOctNovDec";
+    const char mo[4] = { __TIMESTAMP__[4], __TIMESTAMP__[5], __TIMESTAMP__[6], 0 };
+    return va("%.4s-%02d-%.2s %.8s", __TIMESTAMP__+20, 1+( strstr(mos, mo) - mos )/3, __TIMESTAMP__+8, __TIMESTAMP__+11 );
+}
+
+
+void init() { //$
 
 #ifdef SHIPPING
     ttydrop();
     trap();
 #else
     tty(";; AVA - Compiled on " __DATE__ " " __TIME__);
+    tty(build_date());
+    char uuid[37];
+    tty(uid4(uuid));
 
     if(getenv("AVABREAK")) breakpoint();
 
@@ -1298,6 +1436,13 @@ void init() { $
     tty( va("usrdata: %s", usrdata() ) );
     tty( va("usrtemp: %s", usrtemp() ) );
     tty( va("usrwork: %s", usrwork() ) );
+
+/*
+    char *readbuf = iofmap(__FILE__, 0, iofsize(__FILE__));
+    tty( va("read: [%p]", readbuf) );
+    tty( readbuf );
+    iofunmap( readbuf, iofsize(__FILE__) );
+*/
 
     dirch( usrgame() );
     if( dllopen(0, "editor") ) {

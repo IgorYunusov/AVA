@@ -146,26 +146,32 @@ EXPORT( 100,
     API void   callstack(int maxtraces, int (*yield)(const char *line));
 
     // # kit.iof io files
-    // - get size of file. 0 if not found.
+    // - get true if file exists.
+    // - get size of file. 0 may be not found.
     // - get file modification date (number of seconds since unix epoch 1970)
-    // - get true if file exist
-    // - get whole file contents
+    // - get whole file contents.
     //   must free() returned data; return 0 if error; null-ending char silently added
     // - get chunk of data: read len bytes starting from offset
     //   must free() returned data; return 0 if error; null-ending char silently added
     //   tip: if len == ~0ull read as many bytes as possible.
     // - overwrite file with data. returns 0 if error
 
+    // - map file: filename, initial offset and read size in bytes.
+    // - unmap file.
+
+    API char*    iofmap( const char *pathfile, size_t offset, size_t size );
+    API void     iofunmap( char *buf, size_t len );
+
+    API bool     iofexist( const char *pathfile );
     API uint64_t iofsize( const char *pathfile );
     API uint64_t iofstamp( const char *pathfile );
-    API bool     iofexist( const char *pathfile );
     API char*    iofread( const char *pathfile );
     API char*    iofchunk( const char *pathfile, size_t offset, size_t len );
     API bool     iofwrite( const char *pathfile, const void *ptr, int bytes );
-    API bool     iofisdir(const char *pathfile);
-    API bool     iofisfile(const char *pathfile);
-    API bool     iofislink(const char *pathfile);
-    API bool     iofisvirt(const char *pathfile);
+    API bool     iofisdir( const char *pathfile );
+    API bool     iofisfile( const char *pathfile );
+    API bool     iofislink( const char *pathfile );
+    API bool     iofisvirt( const char *pathfile );
 
     // # kit.bin binary data
     // - type of data: may be NULL, "jpg", "png", "ogg", "mp4", etc...
@@ -223,6 +229,24 @@ EXPORT( 100,
     API char*    dirname(char *pathfile);
     API char*    dirtype(char *pathfile);
 
+    // # kit.uid unique ids
+    // - fill buffer with human readable (UUID v4: 16 byte, 128-bit)
+    // - fill buffer with entropy/random data
+
+    API char*    uid4(char uuid4[36+1]);
+    API void     uidbuf(char *buffer, int len);
+
+    // # kit.rnd pseudo-random
+    // - seed state with given argument
+    // - get next integer from state
+    // - get next double from state (0,1]
+    // - get next integer within range from state [mini, maxi]
+
+    API void     rndseed(uint64_t state[2], int64_t seed);
+    API uint64_t rndu64(uint64_t state[2]);
+    API double   rnddbl(uint64_t state[2]);
+    API int64_t  rndint(uint64_t state[2], int64_t mini, int64_t maxi);
+
     // # kit.tst unit-tests
     // - define section for next tests.
     // - test case. symbol gets macro'ed at bottom of this header. See:
@@ -251,6 +275,7 @@ EXPORT( 100,
 #define test(expr) test(expr,__FILE__,__LINE__)
 
 #include "ret.inl" // return codes
+#include "stl.inl" // containers and threading
 
 #endif /* AVA_VERSION */
 
