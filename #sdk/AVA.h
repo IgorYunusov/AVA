@@ -188,11 +188,12 @@ EXPORT( 100,
     // # kit.tty terminal
     // - print into terminal(s)
     // - change terminal color
+    // - number of columns in the terminal window or 0 on error.
     // - drop terminal window if present. close stdout/err as well.
-    // @todo: int ttycols();
 
     API bool   tty(const char *text);
     API void   ttycolor( uint8_t R, uint8_t G, uint8_t B );
+    API int    ttycolumns();
     API void   ttydrop();
 
     // # kit.usr
@@ -220,6 +221,9 @@ EXPORT( 100,
     // - extract basename from directory entry.
     // - extract name from directory entry (basename without extension).
     // - extract type/extension from directory entry (basename without name).
+    // - list files and folders in path, according to mask. accepts *, ?, and ** for subdirs
+    //   returns number of proccessed entries; yields matching entries, that end with '/' if dir
+    //      dirls("./textures/**.*p*", puts);
 
     API char*    dirfix(char *pathfile);
     API char*    dirabs(char **pathfile);
@@ -228,6 +232,7 @@ EXPORT( 100,
     API char*    dirbase(char *pathfile);
     API char*    dirname(char *pathfile);
     API char*    dirtype(char *pathfile);
+    API int      dirls(const char *pathmask, int (*yield)(const char *name));
 
     // # kit.uid unique ids
     // - fill buffer with human readable (UUID v4: 16 byte, 128-bit)
@@ -246,6 +251,15 @@ EXPORT( 100,
     API uint64_t rndu64(uint64_t state[2]);
     API double   rnddbl(uint64_t state[2]);
     API int64_t  rndint(uint64_t state[2], int64_t mini, int64_t maxi);
+
+    // # kit.crc crc and hashing functions
+    // - hash of data blob (crc32)
+    // - hash of pointer
+    // - hash of string (custom algorithm)
+
+    API uint32_t crc32(const void* ptr, size_t len, uint32_t *hash);
+    API uint64_t ptr64(void *addr);
+    API uint64_t str64(const char* str);
 
     // # kit.tst unit-tests
     // - define section for next tests.

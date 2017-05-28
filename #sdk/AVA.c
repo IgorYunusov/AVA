@@ -811,10 +811,15 @@ void dllclose(int plug_id) { $
 // # tty
 
 #ifdef _WIN32
-#include <windows.h>
+#   define NOMINMAX
+#   include <winsock2.h>
+#   include <conio.h>
+#else
+#   include <sys/ioctl.h>
+#   include <termios.h>
+#   include <unistd.h>
 #endif
 #include <stdio.h>
-
 bool tty(const char *text) { $
 #ifdef _MSC_VER
     OutputDebugStringA( text );
@@ -841,6 +846,22 @@ void ttycolor( uint8_t r, uint8_t g, uint8_t b ) { $
     b /= 51; // [0..5]
     printf("\033[38;5;%dm", r*36+g*6+b+16); // "\033[0;3%sm", color_code);
 #endif
+}
+int ttycolumns() { $
+#if _WIN32
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi))
+        return csbi.srWindow.Right - csbi.srWindow.Left + 1; // Window width
+#elif defined(TIOCGSIZE)
+    struct ttysize ts;
+    ioctl(STDIN_FILENO, TIOCGSIZE, &ts);
+    return ts.ts_cols;
+#elif defined(TIOCGWINSZ)
+    struct winsize ts;
+    ioctl(STDIN_FILENO, TIOCGWINSZ, &ts);
+    return ts.ws_col;
+#endif
+    return 0;
 }
 void ttydrop() { $
 #ifdef _WIN32
@@ -937,6 +958,76 @@ bool dirisabs(const char *pathfile) { $
     }
     free( abspath );
     return equal;
+}
+// ---
+#include <string.h> // strrchr, strstr
+#include <stdio.h>  // sprintf
+#include <stdlib.h> // realloc
+#ifdef _WIN32
+#include <winsock2.h>
+#else
+#include <dirent.h>
+#endif
+static char *ls_strcat(char **buf, const char *a, const char *b, const char *c) {
+    int len = strlen(a) + (b ? strlen(b) : 0) + (c ? strlen(c) : 0);
+    sprintf(*buf = (char *)realloc( *buf, len + 1 ), "%s%s%s", a, b ? b : "", c ? c : "");
+    return *buf;
+}
+static int ls_strmatch( const char *text, const char *pattern ) { $
+    if( *pattern=='\0' ) return !*text;
+    if( *pattern=='*' )  return ls_strmatch(text, pattern+1) || (*text && ls_strmatch(text+1, pattern));
+    if( *pattern=='?' )  return *text && (*text != '.') && ls_strmatch(text+1, pattern+1);
+    return (*text == *pattern) && ls_strmatch(text+1, pattern+1);
+}
+// requires: source folder to be a path; ie, must end with '/'
+// requires: match pattern to be '*' at least
+// yields: matching entry, ends with '/' if dir.
+// returns: number of matching entries
+static int ls_recurse( int recurse, const char *src, const char *pattern, int (*yield)(const char *name) ) {
+    char *dir = 0;
+    int count = 0;
+#ifdef _WIN32
+    WIN32_FIND_DATAA fdata;
+    for( HANDLE h = FindFirstFileA( ls_strcat(&dir, src, "*", 0), &fdata ); h != INVALID_HANDLE_VALUE; FindClose( h ), h = INVALID_HANDLE_VALUE ) {
+        for( int next = 1; next; next = FindNextFileA( h, &fdata ) != 0 ) {
+            if( fdata.cFileName[0] != '.' ) {
+                int is_dir = (fdata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) > 0;
+                ls_strcat(&dir, src, fdata.cFileName, is_dir ? "/" : "");
+                if( ls_strmatch( fdata.cFileName, pattern ) ) {
+                    if( yield( dir ) ) return free(dir), count;
+                }
+                count += recurse && is_dir ? ls_recurse( recurse, dir, pattern, yield ) : 1;
+            }
+        }
+    }
+#else
+    for( DIR *tmp, *odir = opendir( src ); odir; closedir( odir ), odir = 0 ) {
+        for( struct dirent *ep; ep = readdir( odir ); ) {
+            if( ep->d_name[0] != '.' ) {
+                int is_dir = 0 != (tmp = opendir( ep->d_name)) ? (closedir( tmp ), 1) : 0;
+                ls_strcat(&dir, src, fdata.cFileName, is_dir ? "/" : "");
+                if( ls_strmatch( ep->d_name, pattern ) ) {
+                    if( yield( dir ) ) return free(dir), count;
+                }
+                count += recurse && is_dir ? ls_recurse( recurse, dir, pattern, yield ) : 1;
+            }
+        }
+    }
+#endif
+    return free(dir), count;
+}
+int dirls(const char *pathmask, int (*yield)(const char *name) ) {
+    if( pathmask[0] == '/' ) return 0; // sandboxed: deny absolute paths
+    if( pathmask[1] == ':' ) return 0; // sandboxed: deny absolute paths
+
+    char path_[256] = "./", mask_[256];
+    const char *slash = strrchr(pathmask, '/');
+    if( slash ) sprintf(path_, "%.*s/", (int)(slash - pathmask), pathmask);
+    sprintf(mask_, "%s", slash ? slash + 1 : pathmask);
+    if(!mask_[0]) sprintf(mask_, "%s", "*");
+    //printf("path=%s mask=%s\n", path_, mask_);
+
+    return ls_recurse( !!strstr(pathmask, "**"), path_, mask_, yield );
 }
 
 // # usr
@@ -1297,6 +1388,35 @@ double rnddbl(uint64_t state[2]) { $ // (0, 1]
 int64_t rndint(uint64_t state[2], int64_t mini, int64_t maxi) { $ // [mini,maxi]
     assert( mini < maxi );
     return (int64_t)(mini + rnddbl(state) * (maxi + 0.5 - mini));
+}
+
+// # crc
+
+#include <stdint.h>
+uint32_t crc32(const void *ptr, size_t len, uint32_t *hash) { $
+    uint8_t* current = (uint8_t*)ptr;
+    uint32_t crc = hash ? ~*hash : ~0;
+    const uint32_t lut[16] = {
+        0x00000000,0x1DB71064,0x3B6E20C8,0x26D930AC,0x76DC4190,
+        0x6B6B51F4,0x4DB26158,0x5005713C,0xEDB88320,0xF00F9344,
+        0xD6D6A3E8,0xCB61B38C,0x9B64C2B0,0x86D3D2D4,0xA00AE278,0xBDBDF21C
+    };
+    while( len-- ) {
+        crc = lut[(crc ^  *current      ) & 0x0F] ^ (crc >> 4);
+        crc = lut[(crc ^ (*current >> 4)) & 0x0F] ^ (crc >> 4);
+        current++;
+    }
+    return hash ? *hash = ~crc : ~crc;
+}
+uint64_t ptr64(void *addr) {
+    return (uint64_t)addr;
+}
+uint64_t str64(const char* str) {
+   uint64_t hash = 0; // fnv1a: 14695981039346656037ULL;
+   while( *str ) {
+        hash = ( *str++ ^ hash ) * 131; // fnv1a: 0x100000001b3ULL;
+   }
+   return hash;
 }
 
 // # crt
