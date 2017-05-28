@@ -16,7 +16,9 @@
     #include <stdarg.h>
     #include <stdbool.h>
 
-    typedef void *any;
+    typedef void *any;   // opaque pointer
+    typedef char  heap;  // pointers from heap. must free() after use.
+    typedef char  stack; // pointers from stack. invalidates often. must copy() between render frames.
 
 //  # std.abi : symbol linkage and visibility.
 
@@ -84,13 +86,13 @@ EXPORT( 100,
     // # kit.fmt va arg string formatting
     // - format variable args into temporary ring-buffer. 16 slots per thread.
     // - format variable list into temporary ring-buffer. 16 slots per thread.
-    // - format variable args and duplicate temporary buffer. must free() result.
-    // - format variable list and duplicate temporary buffer. must free() result.
+    // - format variable args and duplicate temporary buffer.
+    // - format variable list and duplicate temporary buffer.
 
-    API char*  va(const char *format, ...);
-    API char*  vl(const char *format, va_list list);
-    API char*  vadup( const char *fmt, ... );
-    API char*  vldup( const char *fmt, va_list list);
+    API stack* va(const char *format, ...);
+    API stack* vl(const char *format, va_list list);
+    API heap*  vadup( const char *fmt, ... );
+    API heap*  vldup( const char *fmt, va_list list);
 
     // # kit.str string manipulation
     // - find first substring, or 0 if not found.
@@ -113,9 +115,9 @@ EXPORT( 100,
     API char*  strtriml(char *text, const char *substring);
     API char*  strtrimr(char *text, const char *substring);
     API int    strmatch(const char *text, const char *pattern);
-    API bool   strbegin( const char *text, const char *substring );
-    API bool   strend( const char *text, const char *substring );
-    API char*  strlower( char *str );
+    API bool   strbegin(const char *text, const char *substring);
+    API bool   strend(const char *text, const char *substring);
+    API char*  strlower(char *str);
     API int    strchop(const char **tokens, int *sizes, int maxtokens, const char *src, const char *delim);
 
     // # kit.utf utf and unicode
@@ -132,7 +134,7 @@ EXPORT( 100,
     // - install signal/crash handlers
     // - simulate crash
     // - fast exit
-    // - hexdumps data content into memory. must free() returned data
+    // - hexdumps data content into memory.
     // - yields stacktrace to delegated function. negative maxtraces reverse list. See:
     //     void B() { callstack(-64, puts); puts("--"); callstack(+64, puts); } void A() { B(); } int main() { A(); }
 
@@ -142,36 +144,35 @@ EXPORT( 100,
     API void   trap();
     API void   crash();
     API void   die();
-    API char*  hexdump( const void *ptr, unsigned len );
+    API heap*  hexdump(const void *ptr, unsigned len);
     API void   callstack(int maxtraces, int (*yield)(const char *line));
 
     // # kit.iof io files
-    // - get true if file exists.
-    // - get size of file. 0 may be not found.
+    // - get true if path exists.
+    // - get true if path is a directory.
+    // - get true if path is a file.
+    // - get true if path is a link.
+
+    // - get file size of file. 0 may indicate file not found.
     // - get file modification date (number of seconds since unix epoch 1970)
-    // - get whole file contents.
-    //   must free() returned data; return 0 if error; null-ending char silently added
-    // - get chunk of data: read len bytes starting from offset
-    //   must free() returned data; return 0 if error; null-ending char silently added
-    //   tip: if len == ~0ull read as many bytes as possible.
-    // - overwrite file with data. returns 0 if error
-
-    // - map file: filename, initial offset and read size in bytes.
-    // - unmap file.
-
-    API char*    iofmap( const char *pathfile, size_t offset, size_t size );
-    API void     iofunmap( char *buf, size_t len );
+    // - get file contents. return 0 if error; null-ending char silently added
+    // - set file contents (overwrites file). returns 0 if error
+    // - set file contents (appends to file). returns 0 if error
+    // - map chunk of file: filename, initial offset and read size in bytes.
+    // - unmap memory from iofmap().
 
     API bool     iofexist( const char *pathfile );
-    API uint64_t iofsize( const char *pathfile );
-    API uint64_t iofstamp( const char *pathfile );
-    API char*    iofread( const char *pathfile );
-    API char*    iofchunk( const char *pathfile, size_t offset, size_t len );
-    API bool     iofwrite( const char *pathfile, const void *ptr, int bytes );
     API bool     iofisdir( const char *pathfile );
     API bool     iofisfile( const char *pathfile );
     API bool     iofislink( const char *pathfile );
-    API bool     iofisvirt( const char *pathfile );
+
+    API uint64_t iofsize( const char *pathfile );
+    API uint64_t iofstamp( const char *pathfile );
+    API heap*    iofread( const char *pathfile );
+    API bool     iofwrite( const char *pathfile, const void *data, int bytes );
+    API bool     iofappend(const char *pathfile, const void *data, int bytes );
+    API char*    iofmap( const char *pathfile, size_t offset, size_t size );
+    API void     iofunmap( char *buf, size_t len );
 
     // # kit.bin binary data
     // - type of data: may be NULL, "jpg", "png", "ogg", "mp4", etc...
@@ -261,22 +262,34 @@ EXPORT( 100,
     API uint64_t ptr64(void *addr);
     API uint64_t str64(const char* str);
 
+    // # kit.log logging
+    // - init logging on given file stream. many loggers are allowed.
+    // - deploy message to all loggers.
+    // - deploy message to all loggers (using va_list). 
+    //   tip: use LOG(TAGS, ...) convenient macro if desired. see bottom of header.
+    //   tip: if message starts with '!' character, callstack/backtraces will be printed.
+    //     logme( stderr ); LOG(AUDIO|STREAMING, "!this is an audio message (with %s)", "callstack");
+
+    API void     logme( FILE *fp );
+    API void     logva( const char *file, int line, const char *tag, const char *format, ... );
+    API void     logvl( const char *file, int line, const char *tag, const char *format, va_list );
+
     // # kit.tst unit-tests
     // - define section for next tests.
     // - test case. symbol gets macro'ed at bottom of this header. See:
     //     unit("suite 123"); test(1 < 2); test(2 < 3);
 
-    API bool   unit(const char *name);
-    API bool   test(int expression, const char *file, int line);
+    API bool     unit(const char *name);
+    API bool     test(const char *file, int line, int expression);
 
     // # kit.dll dynamic library loading
     // - open dynamic library (without extension). returns 0 if not found
     // - find symbol in dynamic library
     // - close dynamic library
 
-    API  int   dllopen(int plug_id, const char *pathfile);
-    API void*  dllfind(int plug_id, const char *name);
-    API void   dllclose(int plug_id);
+    API  int     dllopen(int plug_id, const char *pathfile);
+    API void*    dllfind(int plug_id, const char *name);
+    API void     dllclose(int plug_id);
 
     // # kit.gui dialog
     // - returns 0 if error, else number of button pressed [1..N]
@@ -286,10 +299,21 @@ EXPORT( 100,
     API int    dialog(const char *format, ...);
 )
 
-#define test(expr) test(expr,__FILE__,__LINE__)
+// rest of api
 
 #include "ret.inl" // return codes
 #include "stl.inl" // containers and threading
+#include "sys.inl" // system headers and detection macros
+
+// a few convenient macros. they just add FILE:LINE most of the times.
+
+#ifdef SHIPPING
+#define LOG(TAGS, ...)
+#define TEST(EXPR)
+#else
+#define LOG(TAGS, ...) logva(__FILE__, __LINE__, #TAGS, __VA_ARGS__)
+#define TEST(EXPR)     test(__FILE__,__LINE__, EXPR)
+#endif
 
 #endif /* AVA_VERSION */
 

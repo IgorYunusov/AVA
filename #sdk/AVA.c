@@ -1,3 +1,11 @@
+//                     /\\ \// /\\
+//                  small game engine
+//
+// This file is subject to the license terms in the LICENSE file
+// found in the top-level directory of this distribution.
+//
+// People who worked on this file: @r-lyeh, 
+
 #  if !defined(API) && defined(__cplusplus)
 #   define API extern "C" __declspec(dllexport)
 #elif !defined(API)
@@ -9,53 +17,11 @@
 #include <stdio.h>  // puts, size_t
 #include <stdlib.h> // realloc, getenv, vsnprintf
 
-#if   defined(__APPLE__)
-#define $lin(...)
-#define $osx(...)       __VA_ARGS__
-#define $win(...)
-#elif defined(linux)
-#define $lin(...)       __VA_ARGS__
-#define $osx(...)
-#define $win(...)
-#elif defined(_WIN32)
+#include "sys.inl"
+
+#ifdef _WIN32 //$win(1)+0
 #include <winsock2.h>
-#define $lin(...)
-#define $osx(...)
-#define $win(...)       __VA_ARGS__
-#else
-#error Target OS not supported
-#endif
-
-#if   defined(__clang__)
-#define $clang(...)     __VA_ARGS__
-#define $gcc(...) 
-#define $msc(...)
-#elif defined(__GNUC__)
-#define $clang(...)
-#define $gcc(...)       __VA_ARGS__
-#define $msc(...)
-#elif defined(_MSC_VER)
-#define $clang(...)
-#define $gcc(...)
-#define $msc(...)       __VA_ARGS__
-#else
-#error Compiler not supported
-#endif
-
-#if defined(NDEBUG) || defined(_NDEBUG)
-#define $release(...)  __VA_ARGS__
-#define $debug(...)
-#else
-#define $debug(...)    __VA_ARGS__
-#define $release(...)
-#endif
-
-#if defined(SHIPPING)
-#define $shipping(...) __VA_ARGS__
-#define $devel(...)
-#else
-#define $shipping(...)
-#define $devel(...)    __VA_ARGS__
+#include <windows.h>
 #endif
 
 // # thread local (@todo: move to builtins)
@@ -561,7 +527,6 @@ char *utf8(uint32_t cp) { $
 
 // # ios
 // @ todo : iosflock, iosfunlock
-// @ todo : iofappend
 
 #if !defined(__MINGW32__) && !defined(_WIN32)
     #include <unistd.h>
@@ -646,6 +611,15 @@ bool iofwrite(const char *pathfile, const void *data, int len) { $
     }
     return ok;
 }
+bool iofappend(const char *pathfile, const void *data, int len) { $
+    bool ok = 0;
+    FILE *fp = fopen8(pathfile, "a+b");
+    if( fp ) {
+        ok = 1 == fwrite(data, len, 1, fp);
+        fclose(fp);
+    }
+    return ok;
+}
 #include <sys/stat.h>
 uint64_t iofstamp( const char *pathfile ) { $
     struct stat st;
@@ -656,7 +630,8 @@ uint64_t iofsize( const char *pathfile ) { $
     return stat(pathfile, &st) < 0 ? 0ULL : (uint64_t)st.st_size;
 }
 bool iofexist( const char *pathfile ) { $
-    return iofstamp( pathfile ) > 0;
+    struct stat st;
+    return stat(pathfile, &st) < 0 ? 0 : 1;
 }
 bool iofisdir( const char *pathfile ) { $
     struct stat st;
@@ -673,10 +648,6 @@ bool iofislink( const char *pathfile ) { $
 #else
     return 0;
 #endif
-}
-bool iofisvirt( const char *pathfile ) { $
-    struct stat st;
-    return stat(pathfile, &st) < 0 ? 1 : 0;
 }
 
 // # bin
@@ -881,7 +852,7 @@ void ttydrop() { $
 
 
 // # dir
-// @ todo: ensure paths end with slash always
+// @ todo: dirstem(), dirup() { path(path(dir)); }
 // @ todo: dirmk(), dirrm(), dirrmrf()
 
 #include <stdlib.h> // realpath
@@ -1031,6 +1002,7 @@ int dirls(const char *pathmask, int (*yield)(const char *name) ) {
 }
 
 // # usr
+// @ todo: paths must end with slash always
 
 static
 char *appfullpath() { $
@@ -1134,7 +1106,7 @@ bool unit(const char *name) { $
     right = wrong = 0;
     return true;
 }
-bool (test)(int expr, const char *file, int line) { $
+bool test(const char *file, int line, int expr) { $
     right = right + !!expr;
     wrong = wrong +  !expr;
     printf("; [%s] when testing (%s L%d) [unit %s: %d/%d] %s\n", !expr ? "FAIL":" OK ", file, line, suite, right, right+wrong, wrong ? "FAILED":"" );
@@ -1162,6 +1134,7 @@ const char *envget( const char *key ) { $
 
 #include <stdarg.h>
 #include <string.h>
+#pragma comment(lib, "user32.lib")
 int dialog(const char *fmt, ...) { $
     int buttons = 2;
     const char *title = "", *icon = "", *message = "";
@@ -1419,6 +1392,60 @@ uint64_t str64(const char* str) {
    return hash;
 }
 
+// # log
+
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#ifdef SHIPPING
+void logme( FILE *fp ) {}
+#else
+static FILE* logfile[32] = {0};
+void logme( FILE *fp ) { $
+    if( fp ) {
+        // find empty slot
+        int slot = 0;
+        while( logfile[slot] && slot < 32 ) ++slot;
+        //
+        if( slot < 32 ) {
+            logfile[slot] = fp;
+            #ifdef NDEBUG
+            // Flush automatically every 16 KiB from now
+            setvbuf(fp, NULL, _IOFBF, 16 * 1024);
+            #else
+            // Disable buffering, always fflush()
+            setvbuf(fp, NULL, _IOFBF, 2);
+            #endif
+            // Header
+            fprintf(fp, "--- New session [built %s]\n", __TIMESTAMP__);
+            fflush(fp);
+        }
+    }
+}
+static THREAD_LOCAL FILE *logvl_file = 0;
+static int logvl_puts( const char *text ) { return fprintf(logvl_file, "%s\n", text); }
+void logvl( const char *file, int line, const char *tags, const char *format, va_list lst ) { $
+    char *vastr = 0;
+    for( int i = 0; logfile[i]; ++i ) {
+        if( !vastr ) {
+            vastr = vl( &format[ format[0] == '!' ], lst );
+            vastr = va( "%019lld [%s] %s (%s:%d)\n", 0ULL/*date64(ust(),gmt())*/, tags, vastr, file, line );
+        }
+        fputs(vastr, logfile[i]);
+        if( format[0] == '!' ) { 
+            logvl_file = logfile[i];
+            callstack( +16, logvl_puts );
+        }
+    }
+}
+void logva( const char *file, int line, const char *tags, const char *format, ... ) { $
+    va_list vl;
+    va_start( vl, format );
+    logvl( file, line, tags, format, vl );
+    va_end( vl );
+}
+#endif
+
 // # crt
 
 typedef void (*ring_quit_cb)();
@@ -1473,30 +1500,30 @@ void ring2() {
 static
 int tests() {
     bool ok = true;
-    ok &= test(1 < 2);
-    ok &= test(2 + 2);
+    ok &= TEST(1 < 2);
+    ok &= TEST(2 + 2);
 //    ok &= dialog("tmbi", "Warning!", "This is a test.\nIs it visible?", 2, "warning");
 
-    ok &= test( 0 == strcmp( dirfix( strdup("/A\\b//c")), "/A/b//c") );
-    ok &= test( 0 == strcmp( dirbase(strdup("/ab/c.e.xt")), "c.e.xt") );
-    ok &= test( 0 == strcmp( dirbase(strdup("c.e.xt")), "c.e.xt") );
-    ok &= test( 0 == strcmp( dirname(strdup("/ab/c.e.xt")), "c") );
-    ok &= test( 0 == strcmp( dirname(strdup("c.e.xt")), "c") );
-    ok &= test( 0 == strcmp( dirtype(strdup("/ab/c.e.xt")), ".e.xt") );
-    ok &= test( 0 == strcmp( dirtype(strdup("c.e.xt")), ".e.xt") );
-    ok &= test( 0 == strcmp( dirpath(strdup("/ab/c.e.xt")), "/ab/") );
-    ok &= test( 0 == strcmp( dirpath(strdup("c.e.xt")), "") );
+    ok &= TEST( 0 == strcmp( dirfix( strdup("/A\\b//c")), "/A/b//c") );
+    ok &= TEST( 0 == strcmp( dirbase(strdup("/ab/c.e.xt")), "c.e.xt") );
+    ok &= TEST( 0 == strcmp( dirbase(strdup("c.e.xt")), "c.e.xt") );
+    ok &= TEST( 0 == strcmp( dirname(strdup("/ab/c.e.xt")), "c") );
+    ok &= TEST( 0 == strcmp( dirname(strdup("c.e.xt")), "c") );
+    ok &= TEST( 0 == strcmp( dirtype(strdup("/ab/c.e.xt")), ".e.xt") );
+    ok &= TEST( 0 == strcmp( dirtype(strdup("c.e.xt")), ".e.xt") );
+    ok &= TEST( 0 == strcmp( dirpath(strdup("/ab/c.e.xt")), "/ab/") );
+    ok &= TEST( 0 == strcmp( dirpath(strdup("c.e.xt")), "") );
     //ASSERT( ls("**.iqm", puts) > 0 );
 
-    ok &= test( 1 < 1 );
+    ok &= TEST( 1 < 1 );
 
     const char *text = "私 は ガ";
-    ok &= test( codepoint(&text) == 31169 );
-    ok &= test( codepoint(&text) == 32 );
-    ok &= test( codepoint(&text) == 12399 );
-    ok &= test( codepoint(&text) == 32 );
-    ok &= test( codepoint(&text) == 12460 );
-    ok &= test( codepoint(&text) == 0 );
+    ok &= TEST( codepoint(&text) == 31169 );
+    ok &= TEST( codepoint(&text) == 32 );
+    ok &= TEST( codepoint(&text) == 12399 );
+    ok &= TEST( codepoint(&text) == 32 );
+    ok &= TEST( codepoint(&text) == 12460 );
+    ok &= TEST( codepoint(&text) == 0 );
 
     return ok;
 }
@@ -1526,13 +1553,11 @@ void init() { //$
     if(getenv("AVABREAK")) breakpoint();
 
     // setup a few loggers and channels
-    /*
-    int append = 1;
-    loginit(0, LOG_ALL, stdout );
-    loginit(1, LOG_ERROR, stderr );
-    loginit(2, LOG_ALL, logopen( "log(master).txt", append ) );
-    loginit(3, LOG_IO, logopen( logname("audio.cpp"), append ) );
-    */
+    bool append = 1;
+    //logme( fopen( va("%s/log.txt", usrgame(), usrbin(), "build_date()"), append ? "a+t" : "wt" ) );
+    logme( stderr );
+
+    LOG(AUDIO|STREAMING, "!this is an audio message (with %s)", "callstack");
 #endif
 
     ring( 1+1, "ring1", ring1 );
