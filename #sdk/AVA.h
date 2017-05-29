@@ -292,6 +292,31 @@ EXPORT( 100,
     API void*       dllfind(int plug_id, const char *name);
     API void        dllclose(int plug_id);
 
+    // # kit.clk clock
+    // - nanoseconds since app initialization
+    // - microseconds since app initialization
+    // - milliseconds since app initialization
+    // - seconds since app initialization
+    // - minutes since app initialization
+    // - hours since app initialization
+
+    API uint64_t ns();
+    API uint64_t us();
+    API uint64_t ms();
+    API uint64_t ss();
+    API uint64_t mm();
+    API uint64_t hh();
+
+    // # kit.thd threading
+    // - yield current thread
+    // - sleep current thread
+
+    API void        yield();
+    API void        sleep_ns( unsigned ns );
+    API void        sleep_us( unsigned us );
+    API void        sleep_ms( unsigned ms );
+    API void        sleep_ss( unsigned ss );
+
     // # kit.gui dialog
     // - returns 0 if error, else number of button pressed [1..N]
     //   format = (t)itle, (m)essage, (b)uttons, (w)indow, (i)con, (c)olors. See:

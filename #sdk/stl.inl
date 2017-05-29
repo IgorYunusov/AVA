@@ -54,15 +54,4 @@ EXPORT( STL100,
     API void detach(void(*fn)(void *), void *arg);
     API void thread(int thread_id, void(*fn)(void *), void *arg);
     API void join(int thread_id);
-
-    // # time
-    // # kit.clk yield and sleep
-    // - yield current thread
-    // - sleep current thread
-
-    API void yield();
-    API void sleep_ns( unsigned ns );
-    API void sleep_us( unsigned us );
-    API void sleep_ms( unsigned ms );
-    API void sleep_ss( unsigned ss );
 )

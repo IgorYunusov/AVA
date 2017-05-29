@@ -850,17 +850,17 @@ int ttycolumns() { $
 }
 void ttydrop() { $
 #ifdef _WIN32
+    FreeConsole();
     //static FILE* fcon = 0; if(!fcon) fcon = fopen("CON", "w" );            // open console
     //static FILE* fout = 0; if(!fout) fout = freopen( "CON", "w", stdout ); // redirect stdout to console
     //static FILE* ferr = 0; if(!ferr) ferr = freopen( "CON", "w", stderr ); // redirect stderr to console
 #endif
+    // hide stdin
+    freopen( tmpnam(0), "rt", stdin ); // also "/dev/null" (linux/osx), "/dev/console" (linux/osx)
     // hide stdout
     freopen( tmpnam(0), "wt", stdout );
     // hide stderr
     freopen( tmpnam(0), "wt", stderr );
-#ifdef _WIN32
-    FreeConsole();
-#endif
 }
 
 
@@ -1172,7 +1172,7 @@ int dialog(const char *fmt, ...) { $
 #if _WIN32
     wchar_t *title16 = widen(title);
     wchar_t *message16 = widen(message);
-    int rc = MessageBoxW(0, message16, title16, 0 |
+    int rc = MessageBoxW(0, message16, title16, MB_SETFOREGROUND |
         (buttons >= 3 ? MB_YESNOCANCEL : buttons >= 2 ? MB_YESNO : MB_OK) |
         (icon[0] == 'i'/*nfo*/ ? MB_ICONEXCLAMATION : 0) |
         (icon[0] == 'e'/*rror*/ ? MB_ICONERROR : 0) |
@@ -1440,6 +1440,113 @@ uint64_t hash_vec3(int pt[3]) {
 }
 */
 
+// # clk
+
+#ifdef _WIN32
+#include <windows.h>
+static
+void nanosleep( int64_t ns ) { $
+    LARGE_INTEGER li;      // Windows sleep in 100ns units
+    HANDLE timer = CreateWaitableTimer(NULL, TRUE, NULL);
+    li.QuadPart = -ns / 100; // Negative for relative time
+    SetWaitableTimer(timer, &li, 0, NULL, NULL, 0);
+    WaitForSingleObject(timer, INFINITE);
+    CloseHandle(timer);
+}
+#else
+#include <sched.h>
+#include <time.h>
+#endif
+void yield() { $
+#ifdef _WIN32
+    SwitchToThread();
+#else
+    sched_yield();
+#endif
+    //std::this_thread::yield(); /* c++11 */
+}
+void sleep_ns( unsigned ns ) { $
+    nanosleep( ns );
+}
+void sleep_us( unsigned us ) { $
+    for( unsigned i = 0; i < us; ++i ) nanosleep(1e3);
+}
+void sleep_ms( unsigned ms ) { $
+    for( unsigned i = 0; i < ms; ++i ) nanosleep(1e6);
+}
+void sleep_ss( unsigned ss ) { $
+    for( unsigned i = 0; i < ss; ++i ) nanosleep(1e9);
+}
+// ---
+#include <stdint.h>
+#if   defined(__APPLE__)
+# include <mach/mach_time.h>
+#elif defined(_WIN32)
+# define WIN32_LEAN_AND_MEAN
+# include <windows.h>
+#else // __linux
+# include <time.h>
+# ifndef  CLOCK_MONOTONIC //_RAW
+#  define CLOCK_MONOTONIC CLOCK_REALTIME
+# endif
+#endif
+static
+uint64_t nanotimer() {
+    static int ever = 0;
+#if defined(__APPLE__)
+    static mach_timebase_info_data_t frequency;
+    if( !ever ) {
+        if( mach_timebase_info( &frequency ) != KERN_SUCCESS ) {
+            return 0;
+        }
+        ever = 1;
+    }
+    return ;
+#elif defined(_WIN32)
+    static LARGE_INTEGER frequency;
+    if( !ever ) {
+        QueryPerformanceFrequency( &frequency );
+        ever = 1;
+    }
+    LARGE_INTEGER t;
+    QueryPerformanceCounter(&t);
+    return (t.QuadPart * (uint64_t)1e9) / frequency.QuadPart;
+#else // __linux
+    struct timespec t;
+    if( !ever ) {
+        if( clock_gettime( CLOCK_MONOTONIC, &spec ) != 0 ) {
+            return 0;
+        }
+        ever = 1;
+    }
+    clock_gettime( CLOCK_MONOTONIC, &spec );
+    return (t.tv_sec * (uint64_t)1e9) + t.tv_nsec;
+#endif
+}
+uint64_t ns() {
+    static uint64_t epoch = 0;
+    if( !epoch ) {
+        epoch = nanotimer();
+    }
+    return nanotimer() - epoch;
+}
+uint64_t us() {
+    return ns() / 1e3;
+}
+uint64_t ms() {
+    return ns() / 1e6;
+}
+uint64_t ss() {
+    return ns() / 1e9;
+}
+uint64_t mm() {
+    return ss() / 60;
+}
+uint64_t hh() {
+    return mm() / 60;
+}
+
+
 // # log
 
 #include <stdarg.h>
@@ -1576,6 +1683,11 @@ int tests() {
     return ok;
 }
 
+static
+void statics() {
+    ns();
+}
+
 #include <string.h>
 static
 char *build_date() { $
@@ -1588,6 +1700,8 @@ char *build_date() { $
 
 
 void init() { //$
+
+    statics();
 
 #ifdef SHIPPING
     ttydrop();
@@ -1662,6 +1776,9 @@ void init() { //$
     const char *pkg = va("%s/%s.pkg", usrgame(), usrbin());
     bool has_pkg = iofexist(pkg);
     printf("[PKG] package%sfound: %s\n", has_pkg ? " " : " not ", pkg );
+
+    printf("%d\n", (int)ns());
+    printf("%d\n", (int)ns());
 
     if( builtin(likely)( 1 >= 1 ) ) {
         quit();
