@@ -59,6 +59,12 @@
     typedef char static_assert_32bit[ sizeof(void *) == 4 ];
 #endif
 
+int bits() {
+    if( INTPTR_MAX >= INT64_MAX ) return 64;
+    if( INTPTR_MAX >= INT32_MAX ) return 32;
+    return 0;
+}
+
 // # units
 
 enum {
@@ -143,6 +149,14 @@ char *vadup( const char *fmt, ... ) { //$
 // # debug
 
 #include <assert.h>
+static
+bool optimized() {
+#if defined(NDEBUG) || defined(_NDEBUG)
+    return 1;
+#else
+    return 0;
+#endif
+}
 bool asserting() { $
     int asserting = 0;
     assert( asserting |= 1 );
@@ -1370,9 +1384,10 @@ uint32_t crc32(const void *ptr, size_t len, uint32_t *hash) { $
     uint8_t* current = (uint8_t*)ptr;
     uint32_t crc = hash ? ~*hash : ~0;
     const uint32_t lut[16] = {
-        0x00000000,0x1DB71064,0x3B6E20C8,0x26D930AC,0x76DC4190,
-        0x6B6B51F4,0x4DB26158,0x5005713C,0xEDB88320,0xF00F9344,
-        0xD6D6A3E8,0xCB61B38C,0x9B64C2B0,0x86D3D2D4,0xA00AE278,0xBDBDF21C
+        0x00000000,0x1DB71064,0x3B6E20C8,0x26D930AC,
+        0x76DC4190,0x6B6B51F4,0x4DB26158,0x5005713C,
+        0xEDB88320,0xF00F9344,0xD6D6A3E8,0xCB61B38C,
+        0x9B64C2B0,0x86D3D2D4,0xA00AE278,0xBDBDF21C
     };
     while( len-- ) {
         crc = lut[(crc ^  *current      ) & 0x0F] ^ (crc >> 4);
@@ -1391,6 +1406,39 @@ uint64_t str64(const char* str) {
    }
    return hash;
 }
+uint64_t hash_int(uint64_t key) {
+    // Thomas Wang's 64 bit Mix Function (public domain) http://www.cris.com/~Ttwang/tech/inthash.htm 
+    key += ~(key << 32);
+    key ^=  (key >> 22);
+    key += ~(key << 13);
+    key ^=  (key >>  8);
+    key +=  (key <<  3);
+    key ^=  (key >> 15);
+    key += ~(key << 27);
+    key ^=  (key >> 31);
+    return key;
+/*  also, 
+    key = (~key) + (key << 21); // key = (key << 21) - key - 1;
+    key = key ^ (key >>> 24);
+    key = (key + (key << 3)) + (key << 8); // key * 265
+    key = key ^ (key >>> 14);
+    key = (key + (key << 2)) + (key << 4); // key * 21
+    key = key ^ (key >>> 28);
+    key = key + (key << 31);
+    return key;
+*/
+}
+uint64_t hash_vec3(int pt[3]) {
+    uint64_t x = hash_int(pt[0]);
+    uint64_t y = hash_int(pt[1]);
+    uint64_t z = hash_int(pt[2]);
+    return x ^ y ^ z;
+}
+/* hash_dbl() {
+    union { uint64_t i; double d; } u; u.d = dbl;
+    return hash_int( u.i );
+}
+*/
 
 // # log
 
@@ -1615,6 +1663,9 @@ void init() { //$
     bool has_pkg = iofexist(pkg);
     printf("[PKG] package%sfound: %s\n", has_pkg ? " " : " not ", pkg );
 
-    quit();
-}
+    if( builtin(likely)( 1 >= 1 ) ) {
+        quit();
+    }
+    builtin(unreachable)();
 
+}

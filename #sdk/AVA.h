@@ -46,20 +46,20 @@
 EXPORT( 100,
 
     // # kit.crt entry point
+    // - add subsystem ring
     // - start engine
     // - drop engine
-    // - add subsystem ring
 
-    API void   init();
-    API void   quit();
-    API void   ring( bool did_init, const char *title, void (*quit)() );
+    API void        ring( bool did_init, const char *title, void (*quit)() );
+    API void        init();
+    API void        quit();
 
     // # kit.arg arguments
     // - argc, as invoked from main()
     // - argv, as invoked from main()
 
-    API int    argc();
-    API char** argv();
+    API int         argc();
+    API char**      argv();
 
     // # kit.cfg configuration options
     // - return value from comma delimited options among all providers below, or defaults if not found.  See:
@@ -80,8 +80,8 @@ EXPORT( 100,
     // - try to recover some memory, then log error, show dialog and die
     // tip: if msg starts with '!' character, callstack/backtrace will be retrieved too. @todo
 
-    API void   error(const char *msg);
-    API void   panic(const char *msg);
+    API void        error(const char *msg);
+    API void        panic(const char *msg);
 
     // # kit.fmt va arg string formatting
     // - format variable args into temporary ring-buffer. 16 slots per thread.
@@ -89,10 +89,10 @@ EXPORT( 100,
     // - format variable args and duplicate temporary buffer.
     // - format variable list and duplicate temporary buffer.
 
-    API stack* va(const char *format, ...);
-    API stack* vl(const char *format, va_list list);
-    API heap*  vadup( const char *fmt, ... );
-    API heap*  vldup( const char *fmt, va_list list);
+    API stack*      va(const char *format, ...);
+    API stack*      vl(const char *format, va_list list);
+    API heap*       vadup( const char *fmt, ... );
+    API heap*       vldup( const char *fmt, va_list list);
 
     // # kit.str string manipulation
     // - find first substring, or 0 if not found.
@@ -110,22 +110,22 @@ EXPORT( 100,
     //         printf("'%.*s'\n", sizes[i], tokens[i]);
     //     }
 
-    API char*  strfindl(char *text, const char *substring);
-    API char*  strfindr(char *text, const char *substring);
-    API char*  strtriml(char *text, const char *substring);
-    API char*  strtrimr(char *text, const char *substring);
-    API int    strmatch(const char *text, const char *pattern);
-    API bool   strbegin(const char *text, const char *substring);
-    API bool   strend(const char *text, const char *substring);
-    API char*  strlower(char *str);
-    API int    strchop(const char **tokens, int *sizes, int maxtokens, const char *src, const char *delim);
+    API char*       strfindl(char *text, const char *substring);
+    API char*       strfindr(char *text, const char *substring);
+    API char*       strtriml(char *text, const char *substring);
+    API char*       strtrimr(char *text, const char *substring);
+    API int         strmatch(const char *text, const char *pattern);
+    API bool        strbegin(const char *text, const char *substring);
+    API bool        strend(const char *text, const char *substring);
+    API char*       strlower(char *str);
+    API int         strchop(const char **tokens, int *sizes, int maxtokens, const char *src, const char *delim);
 
     // # kit.utf utf and unicode
     // - encode codepoint as utf8 string.
     // - decode next codepoint in utf8 string. return 0 if end of string.
 
-    API char*    utf8(uint32_t codepoint);
-    API uint32_t codepoint(const char **utf8);
+    API char*       utf8(uint32_t codepoint);
+    API uint32_t    codepoint(const char **utf8);
 
     // # kit.dbg debug
     // - returns true if asserts are enabled
@@ -138,14 +138,14 @@ EXPORT( 100,
     // - yields stacktrace to delegated function. negative maxtraces reverse list. See:
     //     void B() { callstack(-64, puts); puts("--"); callstack(+64, puts); } void A() { B(); } int main() { A(); }
 
-    API bool   asserting();
-    API bool   debugging();
-    API void   breakpoint();
-    API void   trap();
-    API void   crash();
-    API void   die();
-    API heap*  hexdump(const void *ptr, unsigned len);
-    API void   callstack(int maxtraces, int (*yield)(const char *line));
+    API bool        asserting();
+    API bool        debugging();
+    API void        breakpoint();
+    API void        trap();
+    API void        crash();
+    API void        die();
+    API heap*       hexdump(const void *ptr, unsigned len);
+    API void        callstack(int maxtraces, int (*yield)(const char *line));
 
     // # kit.iof io files
     // - get true if path exists.
@@ -161,30 +161,30 @@ EXPORT( 100,
     // - map chunk of file: filename, initial offset and read size in bytes.
     // - unmap memory from iofmap().
 
-    API bool     iofexist( const char *pathfile );
-    API bool     iofisdir( const char *pathfile );
-    API bool     iofisfile( const char *pathfile );
-    API bool     iofislink( const char *pathfile );
+    API bool        iofexist( const char *pathfile );
+    API bool        iofisdir( const char *pathfile );
+    API bool        iofisfile( const char *pathfile );
+    API bool        iofislink( const char *pathfile );
 
-    API uint64_t iofsize( const char *pathfile );
-    API uint64_t iofstamp( const char *pathfile );
-    API heap*    iofread( const char *pathfile );
-    API bool     iofwrite( const char *pathfile, const void *data, int bytes );
-    API bool     iofappend(const char *pathfile, const void *data, int bytes );
-    API char*    iofmap( const char *pathfile, size_t offset, size_t size );
-    API void     iofunmap( char *buf, size_t len );
+    API uint64_t    iofsize( const char *pathfile );
+    API uint64_t    iofstamp( const char *pathfile );
+    API heap*       iofread( const char *pathfile );
+    API bool        iofwrite( const char *pathfile, const void *data, int bytes );
+    API bool        iofappend(const char *pathfile, const void *data, int bytes );
+    API char*       iofmap( const char *pathfile, size_t offset, size_t size );
+    API void        iofunmap( char *buf, size_t len );
 
     // # kit.bin binary data
     // - type of data: may be NULL, "jpg", "png", "ogg", "mp4", etc...
 
-    API const char *bintype(const char *buf, int len);
+    API const char* bintype(const char *buf, int len);
 
     // # kit.env environment
     // - set environment variable. zero value clears variable
     // - get environment variable, or 0 if not found
 
     API void        envput( const char *key, const char *value );
-    API const char *envget( const char *key );
+    API const char* envget( const char *key );
 
     // # kit.tty terminal
     // - print into terminal(s)
@@ -192,10 +192,10 @@ EXPORT( 100,
     // - number of columns in the terminal window or 0 on error.
     // - drop terminal window if present. close stdout/err as well.
 
-    API bool   tty(const char *text);
-    API void   ttycolor( uint8_t R, uint8_t G, uint8_t B );
-    API int    ttycolumns();
-    API void   ttydrop();
+    API bool        tty(const char *text);
+    API void        ttycolor( uint8_t R, uint8_t G, uint8_t B );
+    API int         ttycolumns();
+    API void        ttydrop();
 
     // # kit.usr
     // - get binary name (launcher).
@@ -206,13 +206,13 @@ EXPORT( 100,
     // - get current working directory (D:\prj\#AVA).
     // - get free space of working directory.
 
-    API char*    usrbin();
-    API char*    usrname();
-    API char*    usrgame();
-    API char*    usrdata();
-    API char*    usrtemp();
-    API char*    usrwork();
-    API uint64_t usrspace();
+    API char*       usrbin();
+    API char*       usrname();
+    API char*       usrgame();
+    API char*       usrdata();
+    API char*       usrtemp();
+    API char*       usrwork();
+    API uint64_t    usrspace();
 
     // # kit.dir
     // - convert backslashes to forward slashes.
@@ -226,21 +226,21 @@ EXPORT( 100,
     //   returns number of proccessed entries; yields matching entries, that end with '/' if dir
     //      dirls("./textures/**.*p*", puts);
 
-    API char*    dirfix(char *pathfile);
-    API char*    dirabs(char **pathfile);
-    API bool     dirisabs(const char *pathfile);
-    API char*    dirpath(char *pathfile);
-    API char*    dirbase(char *pathfile);
-    API char*    dirname(char *pathfile);
-    API char*    dirtype(char *pathfile);
-    API int      dirls(const char *pathmask, int (*yield)(const char *name));
+    API char*       dirfix(char *pathfile);
+    API char*       dirabs(char **pathfile);
+    API bool        dirisabs(const char *pathfile);
+    API char*       dirpath(char *pathfile);
+    API char*       dirbase(char *pathfile);
+    API char*       dirname(char *pathfile);
+    API char*       dirtype(char *pathfile);
+    API int         dirls(const char *pathmask, int (*yield)(const char *name));
 
     // # kit.uid unique ids
     // - fill buffer with human readable (UUID v4: 16 byte, 128-bit)
     // - fill buffer with entropy/random data
 
-    API char*    uid4(char uuid4[36+1]);
-    API void     uidbuf(char *buffer, int len);
+    API char*       uid4(char uuid4[36+1]);
+    API void        uidbuf(char *buffer, int len);
 
     // # kit.rnd pseudo-random
     // - seed state with given argument
@@ -248,55 +248,56 @@ EXPORT( 100,
     // - get next double from state (0,1]
     // - get next integer within range from state [mini, maxi]
 
-    API void     rndseed(uint64_t state[2], int64_t seed);
-    API uint64_t rndu64(uint64_t state[2]);
-    API double   rnddbl(uint64_t state[2]);
-    API int64_t  rndint(uint64_t state[2], int64_t mini, int64_t maxi);
+    API void        rndseed(uint64_t state[2], int64_t seed);
+    API uint64_t    rndu64(uint64_t state[2]);
+    API double      rnddbl(uint64_t state[2]);
+    API int64_t     rndint(uint64_t state[2], int64_t mini, int64_t maxi);
 
     // # kit.crc crc and hashing functions
     // - hash of data blob (crc32)
     // - hash of pointer
     // - hash of string (custom algorithm)
 
-    API uint32_t crc32(const void* ptr, size_t len, uint32_t *hash);
-    API uint64_t ptr64(void *addr);
-    API uint64_t str64(const char* str);
+    API uint32_t    crc32(const void* ptr, size_t len, uint32_t *hash);
+    API uint64_t    ptr64(void *addr);
+    API uint64_t    str64(const char* str);
 
     // # kit.log logging
     // - init logging on given file stream. many loggers are allowed.
-    // - deploy message to all loggers.
-    // - deploy message to all loggers (using va_list). 
-    //   tip: use LOG(TAGS, ...) convenient macro if desired. see bottom of header.
-    //   tip: if message starts with '!' character, callstack/backtraces will be printed.
+    // - deploy message to all loggers (using va_list).
+    // - deploy message to all loggers. See:
     //     logme( stderr ); LOG(AUDIO|STREAMING, "!this is an audio message (with %s)", "callstack");
+    //   tip: LOG(tags, ...) macro adds FILE and LINE.
+    //   tip: callstack/backtraces will be printed if message starts with '!' character.
 
-    API void     logme( FILE *fp );
-    API void     logva( const char *file, int line, const char *tag, const char *format, ... );
-    API void     logvl( const char *file, int line, const char *tag, const char *format, va_list );
+    API void        logme( FILE *fp );
+    API void        logvl( const char *file, int line, const char *tag, const char *format, va_list );
+    API void        logva( const char *file, int line, const char *tag, const char *format, ... );
 
     // # kit.tst unit-tests
     // - define section for next tests.
-    // - test case. symbol gets macro'ed at bottom of this header. See:
-    //     unit("suite 123"); test(1 < 2); test(2 < 3);
+    // - test case. See:
+    //     unit("suite 123"); TEST(1 < 2); TEST(2 < 3);
+    //   tip: TEST(expression) macro adds FILE and LINE.
 
-    API bool     unit(const char *name);
-    API bool     test(const char *file, int line, int expression);
+    API bool        unit(const char *name);
+    API bool        test(const char *file, int line, int expression);
 
     // # kit.dll dynamic library loading
     // - open dynamic library (without extension). returns 0 if not found
     // - find symbol in dynamic library
     // - close dynamic library
 
-    API  int     dllopen(int plug_id, const char *pathfile);
-    API void*    dllfind(int plug_id, const char *name);
-    API void     dllclose(int plug_id);
+    API  int        dllopen(int plug_id, const char *pathfile);
+    API void*       dllfind(int plug_id, const char *name);
+    API void        dllclose(int plug_id);
 
     // # kit.gui dialog
     // - returns 0 if error, else number of button pressed [1..N]
     //   format = (t)itle, (m)essage, (b)uttons, (w)indow, (i)con, (c)olors. See:
     //     dialog("tmbi", "Warning!", "Files will be overwritten\nContinue?", 2, "warning");
 
-    API int    dialog(const char *format, ...);
+    API int         dialog(const char *format, ...);
 )
 
 // rest of api
@@ -304,6 +305,7 @@ EXPORT( 100,
 #include "ret.inl" // return codes
 #include "stl.inl" // containers and threading
 #include "sys.inl" // system headers and detection macros
+#include "bld.inl" // build macros
 
 // a few convenient macros. they just add FILE:LINE most of the times.
 
