@@ -19,9 +19,13 @@
 
 #include "sys.inl"
 
-#ifdef _WIN32 //$win(1)+0
+#if $win(1,0)
 #include <winsock2.h>
 #include <windows.h>
+#pragma warning (push)
+#pragma warning (disable:4091) // microsoft header with warnings. wonderful.
+#include <dbghelp.h>
+#pragma warning (pop)
 #endif
 
 // # thread local (@todo: move to builtins) ###################################
@@ -66,35 +70,144 @@ int bits() {
 }
 
 // # units ####################################################################
+// @todo: move to kit.str ?
 
-enum {
-    // units
-    KiB = 1024,
-    MiB = 1024* KiB,
-    //
-    K = 1000,
-    M = 1000* K,
-};
+const int K = 1000;
+const int M = 1000 *1000;
+const int G = 1000 *1000*1000;
+
+const int KiB = 1024;
+const int MiB = 1024 *1024;
+const int GiB = 1024 *1024*1024;
 
 // # mem ######################################################################
 
 static void *oom = 0;
 
-void* alloc( void **ptr, int len ) { // $
-    return *ptr = realloc( *ptr, len );
+#ifndef REALLOC
+void *REALLOC(void *ptr, int size) {
+    ptr = realloc(ptr, size);
+    if( !ptr && size ) {
+        panic("!out of memory");
+    }
+    return ptr;
 }
+#endif
+#ifndef MALLOC
+void *MALLOC(int size) {
+    return REALLOC( 0, size );
+}
+#endif
+#ifndef FREE
+void FREE(void *ptr) {
+    REALLOC( ptr, 0 );
+}
+#endif
+#ifndef CALLOC
+void* CALLOC(int n, int len) {
+    return memset( MALLOC( n * len ), 0, n * len );
+}
+#endif
+#ifndef STRDUP
+char* STRDUP( const char *str ) {
+    heap *mem = MALLOC( strlen(str) + 1 );
+    strcpy( mem, str );
+    return mem;
+}
+#endif
+#ifndef MSIZE
+#include <stdint.h>
+#if defined(__GLIBC__)
+#  include <malloc.h>
+#  define MSIZE malloc_usable_size
+#elif defined(__APPLE__) || defined(__FreeBSD__)
+#  include <malloc/malloc.h>
+#  define MSIZE  malloc_size
+#elif defined(__ANDROID_API__)
+#  include <malloc.h>
+/*extern "C"*/ size_t dlmalloc_usable_size(void*);
+#  define MSIZE dlmalloc_usable_size
+#elif defined(_WIN32)
+#  include <malloc.h>
+#  define MSIZE _msize
+#else
+#  error Unsupported malloc_usable_size()
+#endif
+#endif
+
+heap *memalloc( int len ) { // $
+    return REALLOC( 0, len );
+}
+heap *memallocf( const char *fmt, ... ) {
+    va_list vl;
+    va_start(vl, fmt);
+    int sz = vsnprintf( 0, 0, fmt, vl );
+    void *ptr = memalloc( sz + 1 );
+    vsnprintf( (char *)ptr, sz, fmt, vl );
+    va_end(vl);
+    return (char *)ptr;
+}
+heap *memdup( const void *src, int len ) {
+    void *dst = 0;
+    len = len ? len : (strlen((const char *)src) + 1);
+    dst = memalloc( len );
+    if( dst ) {
+        memcpy( dst, src, len );
+    }
+    return dst;
+}
+
+static THREAD_LOCAL uint8_t *stack_mem = 0;
+static THREAD_LOCAL uint64_t stack_size = 0, stack_max = 0;
+stack *tmpalloc(int bytes) {
+    if( bytes < 0 ) {
+        if( stack_size > stack_max ) stack_max = stack_size;
+        return (stack_size = 0), NULL;
+    }
+    if( !stack_mem ) stack_mem = memalloc( 4 * MiB );
+    return &stack_mem[ (stack_size += bytes) - bytes ];
+    /*
+    inc_stats('pile', bytes);
+    return &(vamem = (uint8_t*)realloc( vamem, vasz += bytes))[ vasz - bytes ];
+    */
+}
+stack *tmpallocf( const char *fmt, ... ) {
+    va_list vl;
+    va_start(vl, fmt);
+    int sz = vsnprintf( 0, 0, fmt, vl );
+    void *ptr = tmpalloc( sz + 1 );
+    vsnprintf( (char *)ptr, sz, fmt, vl );
+    va_end(vl);
+    return (char *)ptr;
+}
+
+#define free                do_not_use_free
+#define malloc              do_not_use_malloc
+#define realloc             do_not_use_realloc
+#define calloc              do_not_use_calloc
+#define malloc_usable_size  do_not_use_malloc_usable_size
 
 // # err ######################################################################
 
+static
+errorcode error_cb( const char *message ) {
+    return tty( message ) ? 0 : -1;
+}
+
 void error( const char *message ) { // $
     if( message[0] == '!' ) {
-        callstack( 128, puts );
+        callstack( 128, error_cb );
     }
     tty( &message[ message[0] == '!' ] );
 }
 
+void fatal( const char *message ) { // $
+    error( message );
+    exit(-1);
+}
+
 void panic( const char *message ) { // $ // NO_RETURN
-    if( oom ) free(oom), oom = 0;
+    if( oom ) FREE(oom), oom = 0;
     error( message );
     $devel(
         if( debugging() || getenv("AVADEV") ) {
@@ -103,9 +216,15 @@ void panic( const char *message ) { // $ // NO_RETURN
             tty( "; press return key to continue..." );
             getchar();
         }
-    )
+    ,)
     // dialog("tmi", "General failure", error, "error");
     die();
+    // abort           causes abnormal program termination (without cleaning up)
+    // exit            causes normal program termination with cleaning up
+    // _Exit           causes normal program termination without cleaning up (C99)
+    // atexit          registers a function to be called on exit() invocation
+    // quick_exit      causes normal program termination without cleaning up, but with IO buffers flushed (C11)
+    // at_quick_exit   registers a function to be called on quick_exit() invocation
 }
 
 // # va #######################################################################
@@ -116,7 +235,7 @@ char *vl( const char *fmt, va_list lst ) { //$
     int idx = (++vl_index) % 16;
     int sz = 1 + vsnprintf(0, 0, fmt, lst);
     if( sz > 0 ) {
-        vl_buffer[idx] = (char *)realloc( vl_buffer[idx], sz );
+        vl_buffer[idx] = (char *)REALLOC( vl_buffer[idx], sz );
         if( vl_buffer[idx] ) {
             vsnprintf( vl_buffer[idx], sz, fmt, lst );
         }
@@ -184,7 +303,7 @@ void breakpoint() { $
 char *hexdump( const void *ptr, unsigned len ) { $
     int width = 16;
     int maxlen = ((len/width)+1) * (8 + (width * 3) + 4);
-    char *out = (char *)realloc( 0, maxlen ), *stream = out;
+    char *out = (char *)REALLOC( 0, maxlen ), *stream = out;
     unsigned char *data = (unsigned char*)ptr;
     for( unsigned jt = 0; jt < len; jt += width ) {
         stream += sprintf( stream, "; %05d ", jt );
@@ -242,7 +361,7 @@ static char **backtrace_symbols(void *const *array,int size) { //$
     symbol64_blank->MaxNameLength = (MAXSYMBOLNAME-1) / 2; //wchar?
 
     int symlen = size * sizeof(char *);
-    char **symbols = (char **)malloc(symlen);
+    char **symbols = (char **)MALLOC(symlen);
 
     if( symbols ) {
         for( int i = 0; i < size; ++i ) {
@@ -267,7 +386,7 @@ static char **backtrace_symbols(void *const *array,int size) { //$
 
             size_t buflen = buffer - begin + 1;
 
-            symbuf = (char **)realloc( symbols, symlen + buflen );
+            symbuf = (char **)REALLOC( symbols, symlen + buflen );
             if( symbuf ) {
                 memcpy( (char *)symbuf + symlen, begin, buflen );
                 symbuf[ i ] = (char *)(size_t)symlen;
@@ -287,11 +406,11 @@ static char **backtrace_symbols(void *const *array,int size) { //$
 #elif defined(__GNUC__)
 # include <execinfo.h>  // backtrace, backtrace_symbols
 #else
-static int backtrace(void **, int) { $return 0; }
-static char **backtrace_symbols(void *const *,int) { $return 0; }
+static int backtrace(void **, int) { $ return 0; }
+static char **backtrace_symbols(void *const *,int) { $ return 0; }
 #endif
 
-void callstack( int traces, int (*yield)( const char *entry ) ) { //$
+void callstack( int traces, errorcode (*yield)( const char *entry ) ) { //$
     enum { skip = 1 }; /* exclude 1 trace from stack (this function) */
     enum { maxtraces = 128 };
 
@@ -327,14 +446,14 @@ void callstack( int traces, int (*yield)( const char *entry ) ) { //$
                  __cxa_demangle(info.dli_sname, NULL, 0, NULL);
             strcpy( demangled, dmgbuf ? dmgbuf : info.dli_sname );
             symbols[i] = demangled;
-            free( dmgbuf );
+            FREE( dmgbuf );
         }
 #endif
         sprintf(buf, "%3d %#016p %s", ++L, stack[i], symbols[i]);
-        yield(buf);
+        if( yield(buf) < 0 ) break;
     }
 
-    free( symbols );
+    FREE( symbols );
 }
 
 // ---
@@ -417,7 +536,7 @@ void crash() { $
 static
 wchar_t *widen(const char *utf8) { $
     int needed = 2 * /* 6 **/ MultiByteToWideChar(CP_UTF8, 0, utf8, -1, NULL, 0); // uf8len*6
-    void *out = calloc( 1, needed + 1 );
+    void *out = CALLOC( 1, needed + 1 );
     MultiByteToWideChar(CP_UTF8, 0, utf8, -1, out, needed);
     return (wchar_t *)out;
 }
@@ -426,7 +545,7 @@ static
 char *shorten(const wchar_t *wstr) { $
     int wlen = wcslen(wstr);
     int needed = WideCharToMultiByte(CP_UTF8, 0, wstr, wlen, NULL, 0, NULL, NULL);
-    void *out = calloc( 1, needed + 1 );
+    void *out = CALLOC( 1, needed + 1 );
     WideCharToMultiByte(CP_UTF8, 0, wstr, wlen, out, needed, NULL, NULL);
     return (char *)out;
 }*/
@@ -588,7 +707,7 @@ FILE *fopen8( const char *pathfile8, const char *mode8 ) { $
     #ifdef _WIN32
         wchar_t *pf = widen(pathfile8), *md = widen(mode8);
         FILE *fp = _wfopen(pf, md);
-        return free(md), free(pf), fp;
+        return FREE(md), FREE(pf), fp;
     #else
         return fopen( pathfile8, mode8 );
     #endif
@@ -610,7 +729,7 @@ void iofunmap( char *buf, size_t len ) { $
 }
 char* iofread(const char *pathfile) { $
     size_t len = iofsize(pathfile);
-    char *buf = realloc( 0, len + 1 ); buf[len] = 0;
+    char *buf = REALLOC( 0, len + 1 ); buf[len] = 0;
     char *map = iofmap( pathfile, 0, len );
     memcpy( buf, map, len );
     iofunmap( map, len );
@@ -930,7 +1049,7 @@ char *dirabs(char **pathfile) { $
     realpath(*pathfile, absolute);
 #endif
     int len = strlen(absolute) + 1;
-    *pathfile = realloc( *pathfile, len );
+    *pathfile = REALLOC( *pathfile, len );
     memcpy( *pathfile, absolute, len );
     return *pathfile;
 }
@@ -941,7 +1060,7 @@ bool dirisabs(const char *pathfile) { $
     for( int i = 0; pathfile[i] && abspath[i] && equal; ++i ) {
         equal = (pathfile[i] & 32) == (abspath[i] & 32);
     }
-    free( abspath );
+    FREE( abspath );
     return equal;
 }
 // ---
@@ -955,7 +1074,7 @@ bool dirisabs(const char *pathfile) { $
 #endif
 static char *ls_strcat(char **buf, const char *a, const char *b, const char *c) {
     int len = strlen(a) + (b ? strlen(b) : 0) + (c ? strlen(c) : 0);
-    sprintf(*buf = (char *)realloc( *buf, len + 1 ), "%s%s%s", a, b ? b : "", c ? c : "");
+    sprintf(*buf = (char *)REALLOC( *buf, len + 1 ), "%s%s%s", a, b ? b : "", c ? c : "");
     return *buf;
 }
 static int ls_strmatch( const char *text, const char *pattern ) { $
@@ -968,7 +1087,7 @@ static int ls_strmatch( const char *text, const char *pattern ) { $
 // requires: match pattern to be '*' at least
 // yields: matching entry, ends with '/' if dir.
 // returns: number of matching entries
-static int ls_recurse( int recurse, const char *src, const char *pattern, int (*yield)(const char *name) ) {
+static int ls_recurse( int recurse, const char *src, const char *pattern, errorcode (*yield)(const char *name) ) {
     char *dir = 0;
     int count = 0;
 #ifdef _WIN32
@@ -979,7 +1098,7 @@ static int ls_recurse( int recurse, const char *src, const char *pattern, int (*
                 int is_dir = (fdata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) > 0;
                 ls_strcat(&dir, src, fdata.cFileName, is_dir ? "/" : "");
                 if( ls_strmatch( fdata.cFileName, pattern ) ) {
-                    if( yield( dir ) ) return free(dir), count;
+                    if( yield( dir ) < 0 ) return FREE(dir), count;
                 }
                 count += recurse && is_dir ? ls_recurse( recurse, dir, pattern, yield ) : 1;
             }
@@ -992,16 +1111,16 @@ static int ls_recurse( int recurse, const char *src, const char *pattern, int (*
                 int is_dir = 0 != (tmp = opendir( ep->d_name)) ? (closedir( tmp ), 1) : 0;
                 ls_strcat(&dir, src, fdata.cFileName, is_dir ? "/" : "");
                 if( ls_strmatch( ep->d_name, pattern ) ) {
-                    if( yield( dir ) ) return free(dir), count;
+                    if( yield( dir ) < 0 ) return FREE(dir), count;
                 }
                 count += recurse && is_dir ? ls_recurse( recurse, dir, pattern, yield ) : 1;
             }
         }
     }
 #endif
-    return free(dir), count;
+    return FREE(dir), count;
 }
-int dirls(const char *pathmask, int (*yield)(const char *name) ) {
+int dirls(const char *pathmask, errorcode (*yield)(const char *name) ) {
     if( pathmask[0] == '/' ) return 0; // sandboxed: deny absolute paths
     if( pathmask[1] == ':' ) return 0; // sandboxed: deny absolute paths
 
@@ -1179,8 +1298,8 @@ int dialog(const char *fmt, ...) { $
         (icon[0] == 'w'/*arning*/ ? MB_ICONWARNING : 0) |
         (icon[0] == 'q'/*uestion*/ ? MB_ICONQUESTION : 0)
     );
-    free(message16);
-    free(title16);
+    FREE(message16);
+    FREE(title16);
     /**/ if( rc == IDYES || rc == IDOK ) return 1;
     else if( rc == IDNO ) return 2;
     else if( rc == IDCANCEL ) return 3;
@@ -1256,7 +1375,7 @@ const char *ini( const char *defaults, const char *csv_keys ) { $
                 }
             }
         }
-        // free(inibuf); // controlled leak
+        // FREE(inibuf); // controlled leak
     }
     if( keys[0] ) {
         int tksizes[128];
@@ -1380,22 +1499,29 @@ int64_t rndint(uint64_t state[2], int64_t mini, int64_t maxi) { $ // [mini,maxi]
 // # crc ######################################################################
 
 #include <stdint.h>
-uint32_t crc32(const void *ptr, size_t len, uint32_t *hash) { $
-    uint8_t* current = (uint8_t*)ptr;
-    uint32_t crc = hash ? ~*hash : ~0;
-    const uint32_t lut[16] = {
-        0x00000000,0x1DB71064,0x3B6E20C8,0x26D930AC,
-        0x76DC4190,0x6B6B51F4,0x4DB26158,0x5005713C,
-        0xEDB88320,0xF00F9344,0xD6D6A3E8,0xCB61B38C,
-        0x9B64C2B0,0x86D3D2D4,0xA00AE278,0xBDBDF21C
-    };
-    while( len-- ) {
-        crc = lut[(crc ^  *current      ) & 0x0F] ^ (crc >> 4);
-        crc = lut[(crc ^ (*current >> 4)) & 0x0F] ^ (crc >> 4);
-        current++;
+uint64_t crc64(const void *ptr, size_t size) {
+    // based on public domain code by Lasse Collin
+    static uint64_t crc64_table[256];
+    static uint64_t poly64 = UINT64_C(0xC96C5795D7870F42);
+    if( poly64 ) {
+        for( int b = 0; b < 256; ++b ) {
+            uint64_t r = b;
+            for( int i = 0; i < 8; ++i ) {
+                r = r & 1 ? (r >> 1) ^ poly64 : r >> 1;
+            }
+            crc64_table[ b ] = r;
+        }
+        poly64 = 0;
     }
-    return hash ? *hash = ~crc : ~crc;
+    const char *buf = (const char *)ptr;
+    uint64_t crc = ~0ull; // ~crc;
+    while( size != 0 ) {
+        crc = crc64_table[*buf++ ^ (crc & 0xFF)] ^ (crc >> 8);
+        --size;
+    }
+    return ~crc;
 }
+
 uint64_t ptr64(void *addr) {
     return (uint64_t)addr;
 }
@@ -1554,17 +1680,9 @@ void nanosleep( int64_t ns ) { $
     CloseHandle(timer);
 }
 #endif
-void sleep_ns( unsigned ns ) { $
-    nanosleep( ns );
-}
-void sleep_us( unsigned us ) { $
-    for( unsigned i = 0; i < us; ++i ) nanosleep(1e3);
-}
-void sleep_ms( unsigned ms ) { $
-    for( unsigned i = 0; i < ms; ++i ) nanosleep(1e6);
-}
-void sleep_ss( unsigned ss ) { $
+void sleep(unsigned ss, unsigned ms, unsigned us, unsigned ns) { $
     for( unsigned i = 0; i < ss; ++i ) nanosleep(1e9);
+    nanosleep(ms * 1e6 + us * 1e3 + ns);
 }
 int cores() {
 #ifdef __cplusplus
@@ -1605,12 +1723,12 @@ int cores() {
         static DWORD WINAPI thread_wrapper(LPVOID opaque) {
             void (*func)(void *) = ((thread_args *)opaque)->func;
             void *arg0 = ((thread_args *)opaque)->args;
-            free( opaque );
+            FREE( opaque );
             func( arg0 );
             return 0;
         }
         static void* thread_( void (*func)(void *), void *args ) {
-            thread_args *ta = (struct thread_args*)malloc( sizeof(struct thread_args));
+            thread_args *ta = (struct thread_args*)MALLOC( sizeof(struct thread_args));
             ta->func = func;
             ta->args = args;
             return CreateThread(NULL, 0, thread_wrapper, (LPVOID)ta, 0, NULL);
@@ -1634,14 +1752,14 @@ int cores() {
         static void *thread_wrapper( void *opaque ) {
             void (*func)(void *) = ((thread_args *)opaque)->func;
             void *arg0 = ((thread_args *)opaque)->args;
-            free( opaque );
+            FREE( opaque );
             func( arg0 );
             //
             pthread_exit((void**)0);
             return 0;
         }
         static void* thread_( void (*func)(void *), void *args ) {
-            thread_args *ta = (struct thread_args*)malloc( sizeof(struct thread_args));
+            thread_args *ta = (struct thread_args*)MALLOC( sizeof(struct thread_args));
             ta->func = func;
             ta->args = args;
             void *ret;
@@ -1820,7 +1938,7 @@ static int num_rings = 0;
 
 static
 void ring_atexit(void) { // $
-    //free(oom), oom = 0;
+    //FREE(oom), oom = 0;
     if( expected_quit ) {
         while( num_rings ) {
             num_rings--;
@@ -1894,8 +2012,11 @@ int tests() {
 }
 
 static
-void statics() {
+bool statics() {
+    oom = REALLOC( oom, 32* MiB );
+    callstack(0, puts);
     ns();
+    return true;
 }
 
 #include <string.h>
@@ -1911,7 +2032,10 @@ char *build_date() { $
 
 void init() { //$
 
-    statics();
+    // init a few kits
+    if( !statics() ) {
+        exit(-1);
+    }
 
 #ifdef SHIPPING
     ttydrop();
@@ -1934,16 +2058,6 @@ void init() { //$
 
     ring( 1+1, "ring1", ring1 );
     ring( 1+1, "ring2", ring2 );
-
-    // init a few kits
-    oom = realloc( oom, 32* MiB );
-    callstack(0, puts); // tty);
-
-    /*
-    if( !statics() ) {
-        exit(-1);
-    }
-    */
 
     // did it work?
 

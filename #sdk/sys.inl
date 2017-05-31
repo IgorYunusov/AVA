@@ -2,166 +2,120 @@
 //#error  Internal file. Do not include.
 //#endif
 
+#pragma once
+#define $shipping(T,F)  F
+#define $devel(T,F)     F
+#define $release(T,F)   F
+#define $debug(T,F)     F
+#define $clang(T,F)     F
+#define $gcc(T,F)       F
+#define $msc(T,F)       F
+#define $mingw(T,F)     F
+#define $snc(T,F)       F
+#define $arm(T,F)       F
+#define $mips(T,F)      F
+#define $ppc(T,F)       F
+#define $x86(T,F)       F
+#define $big(T,F)       F
+#define $little(T,F)    F
+#define $web(T,F)       F
+#define $and(T,F)       F
+#define $ios(T,F)       F
+#define $osx(T,F)       F
+#define $xb1(T,F)       F
+#define $ps4(T,F)       F
+#define $lin(T,F)       F
+#define $win(T,F)       F
+
 // build type
 #if defined(SHIPPING)
-#define $shipping(...) __VA_ARGS__
-#define $devel(...)
+#undef  $shipping
+#define $shipping(T,F) T
 #else
-#define $shipping(...)
-#define $devel(...)    __VA_ARGS__
+#undef  $devel
+#define $devel(T,F)    T
 #endif
 
 // build optimizations
 #if defined(NDEBUG) || defined(_NDEBUG)
-#define $release(...)  __VA_ARGS__
-#define $debug(...)
+#undef  $release
+#define $release(T,F)  T
 #else
-#define $debug(...)    __VA_ARGS__
-#define $release(...)
+#undef  $debug
+#define $debug(T,F)    T
 #endif
 
 // compilers
 #if   defined(__clang__)
-#define $clang(...)  __VA_ARGS__
-#define $gcc(...) 
-#define $mingw(...)
-#define $msc(...)
-#define $snc(...)
+#undef  $clang
+#define $clang(T,F)  T
 #elif defined(__GNUC__)
-#define $clang(...)
-#define $gcc(...)    __VA_ARGS__
-#define $mingw(...)
-#define $msc(...)
-#define $snc(...)
+#undef  $gcc
+#define $gcc(T,F)    T
 #elif defined(_MSC_VER)
-#define $clang(...)
-#define $gcc(...) 
-#define $mingw(...)
-#define $msc(...)    __VA_ARGS__
-#define $snc(...)
+#undef  $msc
+#define $msc(T,F)    T
 #elif defined(__MINGW32__)
-#define $clang(...)
-#define $gcc(...) 
-#define $mingw(...)  __VA_ARGS__
-#define $msc(...)
-#define $snc(...)
+#undef  $mingw
+#define $mingw(T,F)  T
 #elif defined(__SNC__)
-#define $clang(...)
-#define $gcc(...) 
-#define $mingw(...)
-#define $msc(...)
-#define $snc(...)    __VA_ARGS__
+#undef  $snc
+#define $snc(T,F)    T
 #else
 #error Compiler not supported
 #endif
 
 // architecture
 #if   defined(__arm__) || defined(__thumb__) || defined(__TARGET_ARCH_ARM) || defined(__TARGET_ARCH_THUMB)
-#define $arm(...)  __VA_ARGS__
-#define $mips(...)
-#define $ppc(...)
-#define $x86(...)
+#undef  $arm
+#define $arm(T,F)  T
 #elif defined(__mips__) || defined(__mips) || defined(__MIPS__)
-#define $arm(...)
-#define $mips(...) __VA_ARGS__
-#define $ppc(...)
-#define $x86(...)
+#undef  $mips
+#define $mips(T,F) T
 #elif defined(__powerpc) || defined(__powerpc__) || defined(__POWERPC__) || defined(__ppc__) || defined(_M_PPC) || defined(_ARCH_PPC) || defined(__PPCGECKO__) || defined(__PPCBROADWAY__) || defined(_XENON)
-#define $arm(...)
-#define $mips(...)
-#define $ppc(...)  __VA_ARGS__
-#define $x86(...)
+#undef  $ppc
+#define $ppc(T,F)  T
 #elif defined(_M_IX86) || defined(_X86_) || defined(__i386__) || defined(i386) || defined(__x86__) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(_M_X64)
-#define $arm(...)
-#define $mips(...)
-#define $ppc(...)
-#define $x86(...)  __VA_ARGS__
+#undef  $x86
+#define $x86(T,F)  T
 #else
 #error Architecture not supported
 #endif
 
 // endianness
-#if (defined(__BYTE_ORDER__)&&(__BYTE_ORDER__==__ORDER_BIG_ENDIAN__)) || defined(__BIG_ENDIAN__) || defined(__BIG_ENDIAN) || defined(_BIG_ENDIAN) || ($arm(1)+0) || ($mips(1)+0)
-#define $big(...)    __VA_ARGS__
-#define $little(...) 
+#if (defined(__BYTE_ORDER__)&&(__BYTE_ORDER__==__ORDER_BIG_ENDIAN__)) || defined(__BIG_ENDIAN__) || defined(__BIG_ENDIAN) || defined(_BIG_ENDIAN) || $arm(1,0) || $mips(1,0)
+#undef  $big
+#define $big(T,F)    T
 #else
-#define $big(...)
-#define $little(...) __VA_ARGS__
+#undef  $little
+#define $little(T,F) T
 #endif
 
 // target
 #if   defined(EMSCRIPTEN)
-#define $and(...)
-#define $ios(...)
-#define $lin(...)
-#define $osx(...)
-#define $ps4(...)
-#define $web(...) __VA_ARGS__
-#define $win(...)
-#define $xb1(...)
+#undef  $web
+#define $web(T,F) T
 #elif defined(__ANDROID_API__)
-#define $and(...) __VA_ARGS__
-#define $ios(...)
-#define $lin(...)
-#define $osx(...)
-#define $ps4(...)
-#define $web(...)
-#define $win(...)
-#define $xb1(...)
+#undef  $and
+#define $and(T,F) T
 #elif defined(__APPLE__) && defined(TARGET_OS_IPHONE) && (TARGET_OS_IPHONE)
-#define $and(...)
-#define $ios(...) __VA_ARGS__
-#define $lin(...)
-#define $osx(...)
-#define $ps4(...)
-#define $web(...)
-#define $win(...)
-#define $xb1(...)
+#undef  $ios
+#define $ios(T,F) T
 #elif defined(__APPLE__)
-#define $and(...)
-#define $ios(...)
-#define $lin(...)
-#define $osx(...) __VA_ARGS__
-#define $ps4(...)
-#define $web(...)
-#define $win(...)
-#define $xb1(...)
+#undef  $osx
+#define $osx(T,F) T
 #elif defined(_DURANGO) // 360: _XBOX_VER
-#define $and(...)
-#define $ios(...)
-#define $lin(...)
-#define $osx(...)
-#define $ps4(...)
-#define $web(...)
-#define $win(...)
-#define $xb1(...) __VA_ARGS__
+#undef  $xb1
+#define $xb1(T,F) T
 #elif defined(__ORBIS__)
-#define $and(...)
-#define $ios(...)
-#define $lin(...)
-#define $osx(...)
-#define $ps4(...) __VA_ARGS__
-#define $web(...)
-#define $win(...)
-#define $xb1(...)
+#undef  $ps4
+#define $ps4(T,F) T
 #elif defined(__linux) // also: __LINUX__|__linux__|PLATFORM_POSIX|PLATFORM_UNIX ; other oses: __posix, __unix
-#define $and(...)
-#define $ios(...)
-#define $lin(...) __VA_ARGS__
-#define $osx(...)
-#define $ps4(...)
-#define $web(...)
-#define $win(...)
-#define $xb1(...)
+#undef  $lin
+#define $lin(T,F) T
 #elif defined(_WIN32) // && !_DURANGO && !_XBOX_VER
-#define $and(...)
-#define $ios(...)
-#define $lin(...)
-#define $osx(...)
-#define $ps4(...)
-#define $web(...)
-#define $win(...) __VA_ARGS__
-#define $xb1(...)
+#undef  $win
+#define $win(T,F) T
 #else
 #error Target OS not supported
 #endif
@@ -170,7 +124,7 @@
 
 #define builtin(name) builtin_##name
 
-#if $msc(1)+0
+#if $msc(1,0)
 #define builtin_const         
 #define builtin_forceinline   __forceinline
 #define builtin_inline        __inline
@@ -193,9 +147,9 @@
 /*
 builtin(inline)
 int main() {
-	if( builtin(likely)( 1 >= 1 ) ) {
-		exit(1);
-	}
-	builtin(unreachable);
+    if( builtin(likely)( 1 >= 1 ) ) {
+        exit(1);
+    }
+    builtin(unreachable);
 }
 */
