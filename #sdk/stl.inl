@@ -8,13 +8,13 @@ EXPORT( STL100,
     // - erase last element from container
     // - iterate container
 
-    API void vec_clr( int id );
-    API int  vec_len( int id );
-    API void vec_get( int id, int slot );
-    API void vec_push( int id, void * );
-    API void*vec_back( int id );
-    API void vec_pop( int id );
-    API void vec_for( int id, int (*yield)( void *value ) );
+    API void vecclr( int id );
+    API int  veclen( int id );
+    API void vecget( int id, int slot );
+    API void vecpush( int id, void * );
+    API void*vecback( int id );
+    API void vecpop( int id );
+    API void vecfor( int id, int (*yield)( void *value ) );
 
     // # kit.map dictionaries
     // - clear container
@@ -24,34 +24,10 @@ EXPORT( STL100,
     // - erase element from container
     // - iterate container
 
-    API void map_clr( int id );
-    API int  map_len( int id );
-    API void map_put( int id, uint64_t key, void *value );
-    API void*map_get( int id, uint64_t key );
-    API void map_del( int id, uint64_t key );
-    API void map_for( int id, int (*yield)( uint64_t key, void *value ) );
-
-    // # kit.mtx mutex
-    // - try to lock a mutex. returns 0 if cannot lock
-    // - lock a mutex
-    // - unlock a mute
-
-    API int  try_lock(int mutex_id);
-    API void lock(int mutex_id);
-    API void unlock(int mutex_id);
-
-    // # kit.thd thread
-    // - system process id
-    // - thread id
-    // - number of max concurrent hardware threads (cores)
-    // - detach thread
-    // - start thread
-    // - join thread
-
-    API int pid();
-    API int tid();
-    API int cores();
-    API void detach(void(*fn)(void *), void *arg);
-    API void thread(int thread_id, void(*fn)(void *), void *arg);
-    API void join(int thread_id);
+    API void mapclr( int id );
+    API int  maplen( int id );
+    API void mapput( int id, uint64_t key, void *value );
+    API void*mapget( int id, uint64_t key );
+    API void mapdel( int id, uint64_t key );
+    API void mapfor( int id, int (*yield)( uint64_t key, void *value ) );
 )

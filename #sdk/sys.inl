@@ -90,7 +90,16 @@
 #endif
 
 // target
-#if defined(__ANDROID_API__)
+#if   defined(EMSCRIPTEN)
+#define $and(...)
+#define $ios(...)
+#define $lin(...)
+#define $osx(...)
+#define $ps4(...)
+#define $web(...) __VA_ARGS__
+#define $win(...)
+#define $xb1(...)
+#elif defined(__ANDROID_API__)
 #define $and(...) __VA_ARGS__
 #define $ios(...)
 #define $lin(...)
@@ -154,15 +163,7 @@
 #define $win(...) __VA_ARGS__
 #define $xb1(...)
 #else
-//#error Target OS not supported
-#define $and(...)
-#define $ios(...)
-#define $lin(...)
-#define $osx(...)
-#define $ps4(...)
-#define $web(...) __VA_ARGS__
-#define $win(...)
-#define $xb1(...)
+#error Target OS not supported
 #endif
 
 // builtins

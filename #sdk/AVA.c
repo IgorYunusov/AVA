@@ -24,7 +24,7 @@
 #include <windows.h>
 #endif
 
-// # thread local (@todo: move to builtins)
+// # thread local (@todo: move to builtins) ###################################
 
 #ifdef __GNUC__
 #   define THREAD_LOCAL __thread
@@ -36,7 +36,7 @@
 #   error Cannot define thread_local
 #endif
 
-// # endian
+// # endian ###################################################################
 
 #if defined(__BIG_ENDIAN__) || defined(__sgi)     || \
     defined(__PPC__)        || defined(__ppc__)   || \
@@ -46,7 +46,7 @@
     enum { is_little = 1 };
 #endif
 
-// # arch
+// # arch #####################################################################
 
 #if defined(__x86_64__) || defined(_M_X64)        || \
     defined(__ia64__)   || defined(__powerpc64__) || \
@@ -65,7 +65,7 @@ int bits() {
     return 0;
 }
 
-// # units
+// # units ####################################################################
 
 enum {
     // units
@@ -76,7 +76,7 @@ enum {
     M = 1000* K,
 };
 
-// # mem
+// # mem ######################################################################
 
 static void *oom = 0;
 
@@ -84,7 +84,7 @@ void* alloc( void **ptr, int len ) { // $
     return *ptr = realloc( *ptr, len );
 }
 
-// # err
+// # err ######################################################################
 
 void error( const char *message ) { // $
     if( message[0] == '!' ) {
@@ -108,7 +108,7 @@ void panic( const char *message ) { // $ // NO_RETURN
     die();
 }
 
-// # va
+// # va #######################################################################
 
 static THREAD_LOCAL int vl_index = 0;
 static THREAD_LOCAL char *vl_buffer[16] = {0};
@@ -146,7 +146,7 @@ char *vadup( const char *fmt, ... ) { //$
 }
 
 
-// # debug
+// # debug ####################################################################
 
 #include <assert.h>
 static
@@ -410,7 +410,7 @@ void crash() { $
     catch(42);
 }
 
-// # win wide strings
+// # win wide strings #########################################################
 
 #ifdef _WIN32
 #include <shlobj.h>
@@ -484,7 +484,7 @@ bool strend( const char *text, const char *substring ) { $
     return s1 >= s2 ? 0 == memcmp( &text[ s1 - s2 ], substring, s2 ) : false;
 }
 
-// # utf8 and unicode
+// # utf8 and unicode #########################################################
 //
 #include <wctype.h>
 #include <locale.h>
@@ -539,7 +539,7 @@ char *utf8(uint32_t cp) { $
     return utf[n] = '\0', (char *)utf;
 }
 
-// # ios
+// # ios ######################################################################
 // @ todo : iosflock, iosfunlock
 
 #if !defined(__MINGW32__) && !defined(_WIN32)
@@ -664,7 +664,7 @@ bool iofislink( const char *pathfile ) { $
 #endif
 }
 
-// # bin
+// # bin ######################################################################
 
 const char *bintype(const char *buf, int len) { $
     struct type {
@@ -741,7 +741,7 @@ const char *bintype(const char *buf, int len) { $
     return 0;
 }
 
-// # dll
+// # dll ######################################################################
 
 #ifdef _WIN32
 #   include <stdlib.h>
@@ -793,7 +793,7 @@ void dllclose(int plug_id) { $
     dlclose(plugins[plug_id]);
 }
 
-// # tty
+// # tty ######################################################################
 
 #ifdef _WIN32
 #   define NOMINMAX
@@ -865,7 +865,7 @@ void ttydrop() { $
 
 
 
-// # dir
+// # dir ######################################################################
 // @ todo: dirstem(), dirup() { path(path(dir)); }
 // @ todo: dirmk(), dirrm(), dirrmrf()
 
@@ -1015,7 +1015,7 @@ int dirls(const char *pathmask, int (*yield)(const char *name) ) {
     return ls_recurse( !!strstr(pathmask, "**"), path_, mask_, yield );
 }
 
-// # usr
+// # usr ######################################################################
 // @ todo: paths must end with slash always
 
 static
@@ -1109,7 +1109,7 @@ uint64_t usrspace() { $
     return ~0LLU;
 }
 
-// # tst
+// # tst ######################################################################
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -1128,7 +1128,7 @@ bool test(const char *file, int line, int expr) { $
     return !!expr;
 }
 
-// # env
+// # env ######################################################################
 
 #include <stdlib.h>
 void envput( const char *key, const char *value ) { $
@@ -1144,7 +1144,7 @@ const char *envget( const char *key ) { $
     return getenv(key);
 }
 
-// # dialog
+// # dialog ###################################################################
 
 #include <stdarg.h>
 #include <string.h>
@@ -1194,7 +1194,7 @@ int dialog(const char *fmt, ...) { $
     return 0;
 }
 
-// # arg
+// # arg ######################################################################
 
 int argc() { $
     return __argc;
@@ -1203,7 +1203,7 @@ char **argv() { $
     return __argv;
 }
 
-// # cfg
+// # cfg ######################################################################
 
 const char *env( const char *defaults, const char *csv_sets ) { $
     int tksizes[128];
@@ -1289,7 +1289,7 @@ int cfgi( int defaults, const char *key ) { $
     return found ? atoi( found ) : defaults;
 }
 
-// # uid
+// # uid ######################################################################
 
 #ifdef _WIN32
 #include <Wincrypt.h>
@@ -1334,7 +1334,7 @@ char *uid4( char uuid_[36+1] ) { $
     return uuid_;
 }
 
-// # rnd
+// # rnd ######################################################################
 
 #include <stdint.h>
 static uint64_t mix64(uint64_t state) { $
@@ -1377,7 +1377,7 @@ int64_t rndint(uint64_t state[2], int64_t mini, int64_t maxi) { $ // [mini,maxi]
     return (int64_t)(mini + rnddbl(state) * (maxi + 0.5 - mini));
 }
 
-// # crc
+// # crc ######################################################################
 
 #include <stdint.h>
 uint32_t crc32(const void *ptr, size_t len, uint32_t *hash) { $
@@ -1440,44 +1440,8 @@ uint64_t hash_vec3(int pt[3]) {
 }
 */
 
-// # clk
+// # clk ######################################################################
 
-#ifdef _WIN32
-#include <windows.h>
-static
-void nanosleep( int64_t ns ) { $
-    LARGE_INTEGER li;      // Windows sleep in 100ns units
-    HANDLE timer = CreateWaitableTimer(NULL, TRUE, NULL);
-    li.QuadPart = -ns / 100; // Negative for relative time
-    SetWaitableTimer(timer, &li, 0, NULL, NULL, 0);
-    WaitForSingleObject(timer, INFINITE);
-    CloseHandle(timer);
-}
-#else
-#include <sched.h>
-#include <time.h>
-#endif
-void yield() { $
-#ifdef _WIN32
-    SwitchToThread();
-#else
-    sched_yield();
-#endif
-    //std::this_thread::yield(); /* c++11 */
-}
-void sleep_ns( unsigned ns ) { $
-    nanosleep( ns );
-}
-void sleep_us( unsigned us ) { $
-    for( unsigned i = 0; i < us; ++i ) nanosleep(1e3);
-}
-void sleep_ms( unsigned ms ) { $
-    for( unsigned i = 0; i < ms; ++i ) nanosleep(1e6);
-}
-void sleep_ss( unsigned ss ) { $
-    for( unsigned i = 0; i < ss; ++i ) nanosleep(1e9);
-}
-// ---
 #include <stdint.h>
 #if   defined(__APPLE__)
 # include <mach/mach_time.h>
@@ -1546,8 +1510,254 @@ uint64_t hh() {
     return mm() / 60;
 }
 
+// # thd ######################################################################
+// [ref] http://bisqwit.iki.fi/story/howto/openmp/
+// [ref] https://github.com/tinycthread/tinycthread/
+// [ref] https://stackoverflow.com/questions/12744324/how-to-detach-a-thread-on-windows-c#answer-12746081
 
-// # log
+#if defined(_OPENMP)
+#   include <omp.h>     // #pragma omp
+#endif
+#ifdef _WIN32
+#   include <process.h> // _getpid()
+#   include <windows.h> // SwitchToThread() 
+#   define getpid _getpid
+#else
+#   include <unistd.h>  // getpid()
+#   include <sched.h>   // sched_yield()
+#   include <time.h>    // nanosleep()
+#endif
+int tid() { $
+    static THREAD_LOCAL int tid_;
+    return (intptr_t)&tid_;
+}
+int pid() { $
+    return (int)getpid();
+}
+void yield() { $
+#ifdef __cplusplus
+    std::this_thread::yield();
+#elif defined(_WIN32)
+    SwitchToThread(); // also, Sleep(0); SleepEx(0, FALSE);
+#else
+    sched_yield();    // also, nanosleep();
+#endif
+}
+#ifdef _WIN32
+static
+void nanosleep( int64_t ns ) { $
+    LARGE_INTEGER li;      // Windows sleep in 100ns units
+    HANDLE timer = CreateWaitableTimer(NULL, TRUE, NULL);
+    li.QuadPart = -ns / 100; // Negative for relative time
+    SetWaitableTimer(timer, &li, 0, NULL, NULL, 0);
+    WaitForSingleObject(timer, INFINITE);
+    CloseHandle(timer);
+}
+#endif
+void sleep_ns( unsigned ns ) { $
+    nanosleep( ns );
+}
+void sleep_us( unsigned us ) { $
+    for( unsigned i = 0; i < us; ++i ) nanosleep(1e3);
+}
+void sleep_ms( unsigned ms ) { $
+    for( unsigned i = 0; i < ms; ++i ) nanosleep(1e6);
+}
+void sleep_ss( unsigned ss ) { $
+    for( unsigned i = 0; i < ss; ++i ) nanosleep(1e9);
+}
+int cores() {
+#ifdef __cplusplus
+    return (int)std::thread::hardware_concurrency();
+#elif defined(_OPENMP)
+    int cores = 0;
+    #pragma omp parallel
+    {
+        #pragma omp atomic
+        ++cores;
+    }
+    return cores;
+#else
+    return 1;
+#endif
+}
+#ifdef __cplusplus
+    #include <thread>
+    static std::thread threads[32];
+    bool detach( void (*func)(void *), void *arg ) {
+        std::thread( [=]{ func(arg); }).detach();
+    }
+    bool thread(int thread_id, void (*func)(void *), void *arg) {
+        return threads[thread_id] = std::thread( [&]{ func(arg); } ), true;
+    }
+    bool join(int thread_id) {
+        threads[thread_id].join();
+        return true;
+    }
+#else
+    static void *threads[32];
+    typedef struct thread_args {
+        void *func;
+        void *args;
+    } thread_args;
+    #ifdef _WIN32
+        #include <windows.h>
+        static DWORD WINAPI thread_wrapper(LPVOID opaque) {
+            void (*func)(void *) = ((thread_args *)opaque)->func;
+            void *arg0 = ((thread_args *)opaque)->args;
+            free( opaque );
+            func( arg0 );
+            return 0;
+        }
+        static void* thread_( void (*func)(void *), void *args ) {
+            thread_args *ta = (struct thread_args*)malloc( sizeof(struct thread_args));
+            ta->func = func;
+            ta->args = args;
+            return CreateThread(NULL, 0, thread_wrapper, (LPVOID)ta, 0, NULL);
+        }
+        bool detach( void (*func)(void *), void *arg ) {
+            void *thr = thread_(func, arg);
+            return CloseHandle(thr) != 0 ? true : false;
+        }
+        bool thread(int thread_id, void (*func)(void *), void *arg) {
+            return !!(threads[thread_id] = thread_(func, arg));
+        }
+        bool join(int thread_id) {
+            if( WaitForSingleObject(threads[thread_id], INFINITE) == WAIT_FAILED ) {
+                return false;
+            }
+            CloseHandle(threads[thread_id]);
+            return true;
+        }
+    #else
+        #include <pthread.h>
+        static void *thread_wrapper( void *opaque ) {
+            void (*func)(void *) = ((thread_args *)opaque)->func;
+            void *arg0 = ((thread_args *)opaque)->args;
+            free( opaque );
+            func( arg0 );
+            //
+            pthread_exit((void**)0);
+            return 0;
+        }
+        static void* thread_( void (*func)(void *), void *args ) {
+            thread_args *ta = (struct thread_args*)malloc( sizeof(struct thread_args));
+            ta->func = func;
+            ta->args = args;
+            void *ret;
+            if( pthread_create(&ret, NULL, thread_wrapper, (void *)ta) != 0 ) {
+                *ret = 0;
+            }
+            return ret;
+        }
+        bool detach( void (*func)(void *), void *arg ) {
+            void *thr = thread_(func, arg);
+            return pthread_detach(thr) == 0 ? true : false;
+        }
+        bool thread(int thread_id, void (*func)(void *), void *arg) {
+            return !!(threads[thread_id] = thread_(func, arg));
+        }
+        bool join(int thread_id) {
+            void *nil;
+            int err;
+            do {
+                err = pthread_join(threads[thread_id], &nil );
+            } while( err == EINTR );
+            return err == 0;
+        }
+    #endif
+#endif
+
+// # mtx ######################################################################
+
+#ifdef __cplusplus
+#include <mutex>
+    static std::/*recursive_*/mutex mtx[32];
+    void mtx_on()  {}
+    void mtx_off() {}
+    bool try_lock(int mutex_id) { return mtx[mutex_id].try_lock() ? 1 : 0; }
+    void lock(int mutex_id) { mtx[mutex_id].lock(); }
+    void unlock(int mutex_id) { mtx[mutex_id].unlock(); }
+#elif defined(_OPENMP)
+    static omp_/*nest_*/lock_t mtx[32];
+    void mtx_on()  { for( int i = 0; i < 32; ++i ) omp_init_/*nest_*/lock(&mtx[i]);    }
+    void mtx_off() { for( int i = 0; i < 32; ++i ) omp_destroy_/*nest_*/lock(&mtx[i]); }
+    bool try_lock(int mutex_id) { return !!omp_test_/*nest_*/lock( &mtx[mutex_id] ); }
+    void lock(int mutex_id) { omp_set_/*nest_*/lock( &mtx[mutex_id] ); }
+    void unlock(int mutex_id) { omp_unset_/*nest_*/lock( &mtx[mutex_id] ); }
+#elif !defined(_WIN32)
+    #include <pthread.h>
+    static pthread_mutex_t mtx[32]; // = PTHREAD_MUTEX_INITIALIZER;
+    void mtx_on()  { for( int i = 0; i < 32; ++i ) pthread_mutex_init(&mtx[i], NULL); }
+    void mtx_off() { for( int i = 0; i < 32; ++i ) pthread_mutex_destroy(&mtx[i]); }
+    void lock(int mutex_id) { pthread_mutex_lock( &mtx[mutex_id] ); }
+    bool try_lock(int mutex_id) { return 0 == pthread_mutex_trylock( &mtx[mutex_id] ); }
+    void unlock(int mutex_id) { pthread_mutex_unlock( &mtx[mutex_id] ); }
+#else
+    #if   defined(_WIN32)
+    #   define CAS_LOCK(sl)             _InterlockedExchange((long*)sl, 1)
+    #   define CLEAR_LOCK(sl)           _InterlockedExchange((long*)sl, 0)
+    #   define PAUSE                    SwitchToThread() // _mm_pause() // SleepEx(50, FALSE)
+    #elif defined(__GNUC__)
+    #   define CAS_LOCK(sl)             __sync_lock_test_and_set(sl, 1)
+    #   define CLEAR_LOCK(sl)           __sync_lock_release(sl)
+    #   define PAUSE                    __asm__ __volatile__("pause" ::: "memory") // crossplat: sched_yield() // <sched.h>
+    #endif
+
+    #define LOCK_T                volatile int
+    #define TRY_LOCK(sl)          !CAS_LOCK(sl)
+    #define RELEASE_LOCK(sl)      CLEAR_LOCK(sl)
+    #define ACQUIRE_LOCK(sl)      do { if (CAS_LOCK(sl)) while (*sl || CAS_LOCK(sl)) PAUSE; } while (0)
+    #define INITIAL_LOCK(sl)      (*sl = 0)
+    #define DESTROY_LOCK(sl)      do {} while(0)
+
+    static LOCK_T mtx[32];
+    void mtx_on()  { for( int i = 0; i < 32; ++i ) INITIAL_LOCK(&mtx[i]); }
+    void mtx_off() { for( int i = 0; i < 32; ++i ) DESTROY_LOCK(&mtx[i]); }
+    bool try_lock(int mutex_id) { return !!TRY_LOCK(&mtx[mutex_id]); }
+    void lock(int mutex_id) { ACQUIRE_LOCK( &mtx[mutex_id] ); }
+    void unlock(int mutex_id) { RELEASE_LOCK( &mtx[mutex_id] ); }
+#endif
+
+// # atomics ##################################################################
+
+void atmset( int *var, const int value ) {
+    #ifdef _WIN32
+    _InterlockedExchange( (long volatile *)(var), (long)value );
+    #else
+    __sync_lock_test_and_set( var, value );
+    #endif
+}
+int atmget( int *var ) {
+    #ifdef _WIN32
+    return _InterlockedExchangeAdd( (long volatile *)(var), 0 );
+    #else
+    return __sync_fetch_and_add( var, 0 );
+    #endif
+}
+int atmadd( int *var, const int value ) {
+    #ifdef _WIN32
+    return _InterlockedExchangeAdd( (long volatile *)(var),(long)value );
+    #else
+    return __sync_fetch_and_add( var, value );
+    #endif
+}
+int atminc( int *var ) {
+    #ifdef _WIN32
+    return _InterlockedIncrement( (long volatile *)(var) );
+    #else
+    return __sync_add_and_fetch( var, 1 );
+    #endif
+}
+int atmdec( int *var ) {
+    #ifdef _WIN32
+    return _InterlockedDecrement( (long volatile *)(var) );
+    #else
+    return __sync_add_and_fetch( var, -1 );
+    #endif
+}
+
+// # log ######################################################################
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -1601,7 +1811,7 @@ void logva( const char *file, int line, const char *tags, const char *format, ..
 }
 #endif
 
-// # crt
+// # crt ######################################################################
 
 typedef void (*ring_quit_cb)();
 ring_quit_cb ring_list[32] = {0};

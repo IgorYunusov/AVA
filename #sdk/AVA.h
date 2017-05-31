@@ -9,16 +9,12 @@
 #ifndef AVA_VERSION
 #define AVA_VERSION "0.0.0" // v0.0.0 YOB-Marrow
 
-//  # std.def : definitions, types and constants.
+//  # std.int : types and constants.
 
     #include <stdio.h>
     #include <stdint.h>
     #include <stdarg.h>
     #include <stdbool.h>
-
-    typedef void *any;   // opaque pointer
-    typedef char  heap;  // pointers from heap. must free() after use.
-    typedef char  stack; // pointers from stack. invalidates often. must copy() between render frames.
 
 //  # std.abi : symbol linkage and visibility.
 
@@ -44,6 +40,15 @@
 //
 
 EXPORT( 100,
+
+    // # kit.def definitions
+    // - opaque pointer.
+    // - pointer from heap. must free() after use.
+    // - pointer from stack. must copy() unless temporary (invalidated before every new frame).
+
+    typedef void *  any;
+    typedef char    heap;
+    typedef char    stack;
 
     // # kit.crt entry point
     // - add subsystem ring
@@ -300,22 +305,56 @@ EXPORT( 100,
     // - minutes since app initialization
     // - hours since app initialization
 
-    API uint64_t ns();
-    API uint64_t us();
-    API uint64_t ms();
-    API uint64_t ss();
-    API uint64_t mm();
-    API uint64_t hh();
+    API uint64_t    ns();
+    API uint64_t    us();
+    API uint64_t    ms();
+    API uint64_t    ss();
+    API uint64_t    mm();
+    API uint64_t    hh();
 
     // # kit.thd threading
+    // - get process id
+    // - get thread id
+    // - get number of max concurrent hardware threads (cores)
+    // - start detached thread. return true if started
+    // - start thread. return true if started
+    // - join thread. returns true if joined
     // - yield current thread
-    // - sleep current thread
+    // - sleep current thread (ns < us < ms < ss)
 
+    API int         pid();
+    API int         tid();
+    API int         cores();
+    API bool        detach( void(*function)(void *), void *arg );
+    API bool        thread( int thread_id, void(*function)(void *), void *arg );
+    API bool        join( int thread_id );
     API void        yield();
-    API void        sleep_ns( unsigned ns );
-    API void        sleep_us( unsigned us );
-    API void        sleep_ms( unsigned ms );
-    API void        sleep_ss( unsigned ss );
+    API void        sleep_ns( unsigned duration );
+    API void        sleep_us( unsigned duration );
+    API void        sleep_ms( unsigned duration );
+    API void        sleep_ss( unsigned duration );
+
+    // # kit.mtx mutex
+    // - lock a mutex
+    // - unlock a mute
+    // - try to lock a mutex. returns 0 if cannot lock
+
+    API void        lock(int mutex_id);
+    API void        unlock(int mutex_id);
+    API bool        try_lock(int mutex_id);
+
+    // # kit.atm atomics
+    // - set value into atomic variable
+    // - get atomic variable value
+    // - add value into atomic variable
+    // - increase atomic variable
+    // - decrease atomic variable
+
+    API void        atmset( int *var, const int value );
+    API int         atmget( int *var );
+    API int         atmadd( int *var, const int value );
+    API int         atminc( int *var );
+    API int         atmdec( int *var );
 
     // # kit.gui dialog
     // - returns 0 if error, else number of button pressed [1..N]
@@ -328,7 +367,7 @@ EXPORT( 100,
 // rest of api
 
 #include "ret.inl" // return codes
-#include "stl.inl" // containers and threading
+#include "stl.inl" // containers
 #include "sys.inl" // system headers and detection macros
 #include "bld.inl" // build macros
 
