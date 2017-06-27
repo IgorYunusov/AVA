@@ -125,12 +125,12 @@
 #define builtin(name) builtin_##name
 
 #if $msc(1,0)
-#define builtin_const         
+#define builtin_const
 #define builtin_forceinline   __forceinline
 #define builtin_inline        __inline
 #define builtin_likely(x)     (x)
 #define builtin_pack(struct_) __pragma(pack(push, 1)) struct_ __pragma(pack(pop))
-#define builtin_pure          
+#define builtin_pure
 #define builtin_unlikely(x)   (x)
 #define builtin_unreachable()  __assume(0)
 #else

@@ -4,7 +4,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 //
-// People who worked on this file: @r-lyeh, 
+// People who worked on this file: @r-lyeh,
 
 #ifndef AVA_VERSION
 #define AVA_VERSION "0.0.0" // v0.0.0 YOB-Marrow
