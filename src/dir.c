@@ -20,7 +20,7 @@
 #define PATH_MAX MAX_PATH
 #endif
 static
-void dirch( const char *path ) { $
+void dirchg( const char *path ) { $
 #ifdef _MSC_VER
     _chdir( path );
 #else

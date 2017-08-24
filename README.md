@@ -1,6 +1,6 @@
 <p align="center">
 <br/>
-  <img src="%23bin/etc/logo/free_logo_2.png" width="80px"/><br/>
+  <img src="etc/logo/free_logo_2.png" width="80px"/><br/>
   ΛVΛ<br/>
   Small game engine.<br/>
   Written in 32 random ̷d̷a̷y̷s̷ m̷o̷n̷t̷h̷s̷ years.<br/>
@@ -50,7 +50,7 @@
 
 ### 01
 Project structure, build system and makefiles.
-<img src="%23bin/etc/doc/001.gif" height="96px" align="right">
+<img src="etc/doc/001.gif" height="96px" align="right">
 <br><br>
 
 ## Releases
@@ -103,7 +103,7 @@ g++     game.c AVA.c         && echo AVA as library (Linux)
 clang++ game.c AVA.c         && echo AVA as library (OSX)
 ```
 
-### Redistribution 
+### Redistribution
 ```
 - game.exe + .ico           (player)
 - game.dll/.lua/.socket      (logic) \
@@ -137,7 +137,6 @@ clang++ game.c AVA.c         && echo AVA as library (OSX)
 
 ## Status
 
-[![Discord Channel](https://img.shields.io/badge/discord-AVA%20lounge-738bd7.svg)](https://discord.gg/vu6Vt9d) 
+[![Discord Channel](https://img.shields.io/badge/discord-AVA%20lounge-738bd7.svg)](https://discord.gg/vu6Vt9d)
 [![Travis](https://api.travis-ci.org/r-lyeh/AVA.svg?branch=master)](https://travis-ci.org/r-lyeh/AVA)
-[![Issues](https://www.quantifiedcode.com/api/v1/project/7fc9dc58fa9441238223c803f63cfe7e/badge.svg)](https://www.quantifiedcode.com/app/project/7fc9dc58fa9441238223c803f63cfe7e)
 [![Unlicensed](http://img.shields.io/badge/license-Unlicense-blue.svg?style=flat)](http://unlicense.org/)

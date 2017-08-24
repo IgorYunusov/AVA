@@ -22,13 +22,13 @@
                 else if( prot & PROT_WRITE ) flProtect = PAGE_READWRITE;
                 else                         flProtect = PAGE_READONLY;
                 HANDLE h = CreateFileMapping( fd == -1 ? INVALID_HANDLE_VALUE : (HANDLE)_get_osfhandle(fd),
-                    NULL, flProtect, (end >> 32), (uint32_t)end, NULL);
+                    NULL, flProtect, (end >> 31) >> 1, (uint32_t)end, NULL);
                 if( h != NULL ) {
                     DWORD dwDesiredAccess = 0;
                     dwDesiredAccess |= prot & PROT_WRITE ? FILE_MAP_WRITE : FILE_MAP_READ;
                     dwDesiredAccess |= prot & PROT_EXEC ? FILE_MAP_EXECUTE : 0;
                     dwDesiredAccess |= flags & MAP_PRIVATE ? FILE_MAP_COPY : 0;
-                    void *ret = MapViewOfFile(h, dwDesiredAccess, (offset >> 32), (uint32_t)offset, length);
+                    void *ret = MapViewOfFile(h, dwDesiredAccess, (offset >> 31) >> 1, (uint32_t)offset, length);
                     CloseHandle(h); // close the Windows Handle here (we handle the file ourselves with fd)
                     return ret == NULL ? MAP_FAILED : ret;
                 }

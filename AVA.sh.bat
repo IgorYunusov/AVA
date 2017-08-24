@@ -5,19 +5,19 @@
 # bash
 echo [bash env]
 
-#sdk/builder/premake5.linux codelite
-#sdk/builder/premake5.linux gmake
-#sdk/builder/premake5.linux vs2013
-#sdk/builder/premake5.linux xcode4
-#sdk/builder/premake5.linux ninja
-#sdk/builder/ninja.linux -C .ide
+bin/builder/premake5.linux codelite
+bin/builder/premake5.linux gmake
+bin/builder/premake5.linux vs2013
+bin/builder/premake5.linux xcode4
+bin/builder/premake5.linux ninja
+bin/builder/ninja.linux -C .ide
 
-#sdk/builder/premake5.osx codelite
-#sdk/builder/premake5.osx gmake
-#sdk/builder/premake5.osx vs2013
-#sdk/builder/premake5.osx xcode4
-#sdk/builder/premake5.osx ninja
-#sdk/builder/ninja.osx   -C .ide
+bin/builder/premake5.osx codelite
+bin/builder/premake5.osx gmake
+bin/builder/premake5.osx vs2013
+bin/builder/premake5.osx xcode4
+bin/builder/premake5.osx ninja
+bin/builder/ninja.osx   -C .ide
 
 exit
 
@@ -39,7 +39,7 @@ exit
     REM setup
 
         REM MSVC
-        if not "%Platform%"=="x64" ( 
+        if not "%Platform%"=="x64" (
             echo [win][msc]
                    if exist "%VS140COMNTOOLS%\..\..\VC\bin\x86_amd64\vcvarsx86_amd64.bat" (
                       @call "%VS140COMNTOOLS%\..\..\VC\bin\x86_amd64\vcvarsx86_amd64.bat"
@@ -51,17 +51,17 @@ exit
             )
         )
 
-        REM Luajit, %AVASDK%
-        if ""=="" ( 
+        REM Luajit, %AVABIN%
+        if ""=="" (
             echo [win][set]
-            set AVASDK="%~dp0%\#sdk\"
-            REM set      path="%path%;%~dp0%\#sdk\;"
-            REM      endlocal &&  && set AVASDK=%AVASDK%
+            set AVABIN="%~dp0%\bin\"
+            REM set      path="%path%;%~dp0%\bin\;"
+            REM      endlocal &&  && set AVABIN=%AVABIN%
         )
 
     REM build
 
-        pushd "%AVASDK%\builder"
+        pushd "%AVABIN%\builder"
 
             REM project generation
             REM premake5.exe codelite
@@ -80,7 +80,7 @@ exit
 
     REM launch
 
-    pushd "!AVASDK!\.."
+    pushd "!AVABIN!\.."
 
         if "0"=="%OK%" (
             echo ^>^> launcher

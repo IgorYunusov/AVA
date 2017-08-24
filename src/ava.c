@@ -12,7 +12,7 @@
 #   define API            __declspec(dllexport)
 #endif
 
-#include "AVA.h"
+#include "ava.h"
 
 #include <stdio.h>  // puts, size_t
 #include <stdlib.h> // realloc, getenv, vsnprintf
@@ -20,7 +20,7 @@
 #include "sys.c"
 #include "i18.c"
 #include "mem.c"
-#include "vaf.c"
+#include "val.c"
 #include "err.c"
 #include "dbg.c"
 #include "str.c"

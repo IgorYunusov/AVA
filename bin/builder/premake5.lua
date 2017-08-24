@@ -15,8 +15,8 @@ project "launcher"
 	language "C++"
 	targetdir "../../.bin/%{cfg.buildcfg}"
 
-	files {"../../#sdk/launcher/**.c*", "../../#sdk/launcher/**.h*" } -- "../../#sdk/launcher/dialog.rc" }
-	includedirs {"../../#sdk/editor/", "../../#sdk/"}
+	files {"../../app/launcher/**.c*", "../../app/launcher/**.h*" } -- "../../app/launcher/dialog.rc" }
+	includedirs {"../../bin/editor/", "../../src/"}
 	links {"runtimes", "editor", "game" }
 
 	configuration "windows"
@@ -51,9 +51,10 @@ project "runtimes"
 	language "C++"
 	targetdir "../../.bin/%{cfg.buildcfg}"
 
-	files {"../../#sdk/*.c", "../../#sdk/*.cpp", "../../#sdk/*.h", "../../#sdk/*.inl"}
-	files {"../../#sdk/runtimes/**.c", "../../#sdk/runtimes/**.cpp", "../../#sdk/runtimes/**.h", "../../#sdk/runtimes/**.inl"}
-	includedirs {"../../#sdk/"}
+--	files {"../../#sdk/*.c", "../../#sdk/*.cpp", "../../#sdk/*.h", "../../#sdk/*.inl"}
+--	files {"../../src/**.c", "../../src/**.cpp", "../../src/**.h", "../../src/**.inl"}
+	files {"../../src/ava.c"}
+	includedirs {"../../src/"}
 	defines {"DLL_EXPORT"}
 
 	filter "configurations:debug"
@@ -74,8 +75,8 @@ project "editor"
 	language "C++"
 	targetdir "../../.bin/%{cfg.buildcfg}"
 
-	files {"../../#sdk/editor/**.c*", "../../#sdk/editor/**.h*"}
-	includedirs {"../../#sdk/editor/", "../../#sdk/"}
+	files {"../../app/editor/**.c*", "../../app/editor/**.h*"}
+	includedirs {"../../app/editor/", "../../src/"}
 	defines {"DLL_EXPORT"}
 
 	filter "configurations:debug"
@@ -96,9 +97,9 @@ project "game"
 	language "C++"
 	targetdir "../../.bin/%{cfg.buildcfg}"
 
-	files { "../../**.c", "../../**.cpp", "../../**.cc", "../../**.cxx", "../../**.h", "../../**.hpp", "../../**.inl"}
-	removefiles { "../../#sdk/**" }
-	includedirs {"../../#sdk/editor/", "../../#sdk/"}
+	files { "../../app/template/**.c", "../../app/template/**.cpp", "../../app/template/**.cc", "../../app/template/**.cxx", "../../app/template/**.h", "../../app/template/**.hpp", "../../app/template/**.inl"}
+	--removefiles { "../../app/**" }
+	includedirs {"../../app/editor/", "../../src/"}
 	defines {"DLL_EXPORT"}
 
 	filter "configurations:debug"

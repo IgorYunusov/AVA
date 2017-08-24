@@ -144,7 +144,7 @@ void init() { //$
     iofunmap( readbuf, iofsize(__FILE__) );
 */
 
-    dirch( usrgame() );
+    dirchg( usrgame() );
     if( dllopen(0, "editor") ) {
         void *pfn = dllfind(0, "main");
         printf("editor.dll %p\n", pfn );

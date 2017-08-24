@@ -4,7 +4,14 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 //
+// Dear contributor, meet following directives when comitting:
+//   - Design an imperative, immediate mode API.
+//   - Declare least possible function arguments.
+//   - Implement smallest code you can figure out.
+//   - Style and indent are readable and compact enough.
+//
 // People who worked on this file: @r-lyeh,
+//
 
 #ifndef AVA_VERSION
 #define AVA_VERSION "0.0.0" // v0.0.0 YOB-Marrow
@@ -96,7 +103,7 @@ EXPORT( 100,
     API const char* cfg         (const char *defaults, const char *csv_vars);
     API const char* env         (const char *defaults, const char *csv_sets);
     API const char* arg         (const char *defaults, const char *csv_opts);
-    API const char* ini         (const char *defaults, const char *csv_keys);
+////API const char* ini         (const char *defaults, const char *csv_keys);
 
     // # kit.err errors
     // - log error and continue
@@ -114,8 +121,8 @@ EXPORT( 100,
     // - format variable args and duplicate temporary buffer.
     // - format variable list and duplicate temporary buffer.
 
-    API stack*      va          (const char *format, ...);
-    API stack*      vl          (const char *format, va_list list);
+////API stack*      va          (const char *format, ...);
+////API stack*      vl          (const char *format, va_list list);
     API heap*       vadup       (const char *fmt, ... );
     API heap*       vldup       (const char *fmt, va_list list);
 
@@ -169,7 +176,7 @@ EXPORT( 100,
     API void        trap        ();
     API void        crash       ();
     API void        die         ();
-    API heap*       hexdump     (const void *ptr, unsigned len);
+////API heap*       hexdump     (const void *ptr, unsigned len);
     API void        callstack   (int maxtraces, errorcode (*yield)(const char *line));
 
     // # kit.iof io files
@@ -342,23 +349,23 @@ EXPORT( 100,
     // - yield current thread
     // - sleep current thread
 
-    API int         pid         ();
-    API int         tid         ();
-    API int         cores       ();
-    API bool        detach      (void(*function)(void *), void *arg);
-    API bool        thread      (int thread_id, void(*function)(void *), void *arg);
-    API bool        join        (int thread_id);
-    API void        yield       ();
-    API void        sleep       (unsigned ss, unsigned ms, unsigned us, unsigned ns);
+////API int         pid         ();
+////API int         tid         ();
+////API int         cores       ();
+////API bool        detach      (void(*function)(void *), void *arg);
+////API bool        thread      (int thread_id, void(*function)(void *), void *arg);
+////API bool        join        (int thread_id);
+////API void        yield       ();
+////API void        sleep       (unsigned ss, unsigned ms, unsigned us, unsigned ns);
 
     // # kit.mtx mutex
     // - lock a mutex
     // - unlock a mute
     // - try to lock a mutex. returns 0 if cannot lock
 
-    API void        lock(int mutex_id);
-    API void        unlock(int mutex_id);
-    API bool        try_lock(int mutex_id);
+    API void        lock        (int mutex_id);
+    API void        unlock      (int mutex_id);
+    API bool        try_lock    (int mutex_id);
 
     // # kit.atm atomics
     // - set value into atomic variable
@@ -367,26 +374,26 @@ EXPORT( 100,
     // - increase atomic variable
     // - decrease atomic variable
 
-    API void        atmset(int *var, const int value);
-    API int         atmget(int *var);
-    API int         atmadd(int *var, const int value);
-    API int         atminc(int *var);
-    API int         atmdec(int *var);
+    API void        atmset      (int *var, const int value);
+    API int         atmget      (int *var);
+    API int         atmadd      (int *var, const int value);
+    API int         atminc      (int *var);
+    API int         atmdec      (int *var);
 
     // # kit.gui dialog
     // - returns 0 if error, else number of button pressed [1..N]
     //   format = (t)itle, (m)essage, (b)uttons, (w)indow, (i)con, (c)olors. See:
     //     dialog("tmbi", "Warning!", "Files will be overwritten\nContinue?", 2, "warning");
 
-    API int         dialog(const char *format, ...);
+    API int         dialog      (const char *format, ...);
 )
 
-// rest of api
+// rest of api (inline files)
 
-#include "ret.inl" // return codes
-#include "stl.inl" // containers
-#include "sys.inl" // system headers and detection macros
-#include "bld.inl" // build macros
+#include "ret.i" // return codes
+#include "stl.i" // containers
+#include "sys.i" // system headers and detection macros
+#include "bld.i" // build macros
 
 // a few convenient macros. they just add FILE:LINE most of the times.
 
